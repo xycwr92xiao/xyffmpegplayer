@@ -2,7 +2,7 @@
 
 # up主添加
 
-源项目地址：[itisyang/XyPlayer: 一个视频音频播放器，开源版 potplayer ，用于总结播放器开发技术。 (github.com)](https://github.com/xycwr92xiao/XyPlayer)
+源项目地址：[itisyang/XyPlayer: 一个视频音频播放器，开源版 potplayer ，用于总结播放器开发技术。 (github.com)](https://github.com/xycwr92xiao/XyffmoegPlayer)
 
 
 ## 简介
@@ -12,16 +12,11 @@
 - 项目目录下的 .pro 文件，  QtCreator 打开编译调试。  
 
  
-
-
 ## Windows平台编译调试
-1. 程序运行需要的运行时库在XyPlayer\dll
+1. 程序运行需要的运行时库在XyPlayer\dll,由于仓库限制，可下载安装程序获取
 
 2. 使用 QtCreator 打开 playerdemo.pro。  
 3. 编译运行。  
-
-
-
 
 
 # 原GitHub作者
@@ -32,17 +27,13 @@
 一个视频播放器，开源版 potplayer。  
 用于学习和交流音视频技术。  
 欢迎音视频开发爱好者交流相关问题。  
-https://xycwr92xiao.github.io/XyPlayer/
+https://xycwr92xiao.github.io/XyffmpegPlayer/
 
 ## 简介
 - 使用 FFmpeg-4.2.2 (x64) 解码，SDL2-2.0.10 (x64) 渲染。  
 - 在 Windows 下使用 Qt5.14.x (MinGW x64) 开发。  
 - 项目目录下的 .pro 文件，支持在多平台（Windows、Linux、Mac）下 QtCreator 打开编译调试。  
 
-![playerdemo_play](https://cdn.staticaly.com/gh/itisyang/MyImages@master/images/playerdemo_play.png)
-
-## 沟通
-- Issues: 欢迎给我提 issues，关于本项目的问题，请优先提 issues，我会尽量当天回复。
 
 ## Windows平台编译调试
 1. 下载 FFmpeg、SDL2 动态库，dll放在 bin 目录下，头文件和lib文件替换掉lib文件夹中的内容。(直接从官网下载即可)  
