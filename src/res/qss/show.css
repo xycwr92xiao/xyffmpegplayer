@@ -1,0 +1,27 @@
+QWidget{
+    background-color: black;
+    color:#dddddd;
+    border: 1px solid black;
+  /*  border-bottom: none;*/
+}
+/* 按钮基本样式 */
+QPushButton {
+    background-color: #3c3c3c;  /* 灰色背景 */
+    color: #dddddd;              /* 白色文字 */
+    border: 1px solid #555;    /* 灰色边框 */
+    border-radius: 3px;        /* 圆角 */
+    padding: 5px 15px;         /* 内边距 */
+    font-size: 12px;           /* 字体大小 */
+}
+
+/* 按钮悬停效果 */
+QPushButton:hover {
+    background-color: #4a4a4a;  /* 悬停时稍亮的背景 */
+    color: white;              /* 白色文字 */
+    border: 1px solid #666;     /* 悬停时稍亮的边框 */
+}
+
+/* 按钮按下效果 */
+QPushButton:pressed {
+    background-color: #2a2a2a;  /* 按下时稍暗的背景 */
+}

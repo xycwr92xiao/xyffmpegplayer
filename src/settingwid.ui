@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SettingWid</class>
+ <widget class="QWidget" name="SettingWid">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>550</width>
+    <height>545</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>550</width>
+    <height>500</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>播放器设置</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget {
+    background-color: #2b2b2b;
+    color: #cccccc;
+    font-family: &quot;Microsoft YaHei&quot;;
+    font-size: 10pt;
+}
+
+QGroupBox {
+    border: 1px solid #444;
+    border-radius: 5px;
+    margin-top: 10px;
+    padding-top: 10px;
+    font-weight: bold;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 5px 0 5px;
+    color: #aaaaaa;
+}
+
+QLabel {
+    color: #aaaaaa;
+    padding: 2px;
+}
+
+QComboBox, QSpinBox {
+    background-color: #333333;
+    border: 1px solid #555555;
+    border-radius: 3px;
+    padding: 5px;
+    color: #cccccc;
+    min-height: 25px;
+}
+
+QComboBox:hover, QSpinBox:hover {
+    border: 1px solid #666666;
+}
+
+QComboBox::drop-down {
+    border: none;
+}
+
+QComboBox::down-arrow {
+    image: url(:/res/icons/down_arrow.svg);
+    width: 12px;
+    height: 12px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #333333;
+    border: 1px solid #555555;
+    color: #cccccc;
+    selection-background-color: #2a5ea0;
+}
+
+QPushButton {
+    background-color: #3a3a3a;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    padding: 8px 16px;
+    color: #cccccc;
+    font-weight: normal;
+    min-width: 80px;
+}
+
+QPushButton:hover {
+    background-color: #444444;
+    border: 1px solid #666666;
+}
+
+QPushButton:pressed {
+    background-color: #2a2a2a;
+}
+
+QPushButton#btnOk {
+    background-color: #2a5ea0;
+    border: 1px solid #1e4a7a;
+    color: white;
+}
+
+QPushButton#btnOk:hover {
+    background-color: #2d6bb0;
+}
+
+QPushButton#btnCancel {
+    background-color: #555555;
+    border: 1px solid #666666;
+}
+
+QPushButton#btnCancel:hover {
+    background-color: #666666;
+}
+
+/* 颜色按钮样式 */
+QPushButton.colorBtn {
+    min-width: 60px;
+    max-width: 60px;
+    min-height: 25px;
+    max-height: 25px;
+    border: 1px solid #666;
+}
+
+QCheckBox {
+    spacing: 5px;
+}
+
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QGroupBox" name="groupBoxSubtitle">
+     <property name="title">
+      <string>字幕设置</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="1" column="2">
+       <widget class="QSpinBox" name="spinFontSize">
+        <property name="suffix">
+         <string> 像素</string>
+        </property>
+        <property name="minimum">
+         <number>8</number>
+        </property>
+        <property name="maximum">
+         <number>72</number>
+        </property>
+        <property name="value">
+         <number>16</number>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="labelHoverBgColor">
+        <property name="text">
+         <string>悬停背景色：</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="labelTextColor">
+        <property name="text">
+         <string>文字颜色：</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QComboBox" name="comboFontFamily">
+        <property name="editable">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="labelFontFamily">
+        <property name="text">
+         <string>字体：</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="0" colspan="3">
+       <widget class="QLabel" name="labelPreview">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>100</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QLabel {
+    padding: 10px;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.3);
+}</string>
+        </property>
+        <property name="text">
+         <string>预览：这是一个字幕预览示例</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="2">
+       <layout class="QHBoxLayout" name="horizontalLayout_LeaveBgColor">
+        <item>
+         <widget class="QPushButton" name="btnLeaveBgColor">
+          <property name="styleSheet">
+           <string notr="true">background-color: rgba(0, 0, 0, 100);</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="flat">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelLeaveBgColorDisplay">
+          <property name="text">
+           <string>浅透黑</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="labelStrokeColor">
+        <property name="text">
+         <string>描边颜色：</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="2">
+       <layout class="QHBoxLayout" name="horizontalLayout_HoverBgColor">
+        <item>
+         <widget class="QPushButton" name="btnHoverBgColor">
+          <property name="styleSheet">
+           <string notr="true">background-color: rgba(0, 0, 0, 150);</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="flat">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelHoverBgColorDisplay">
+          <property name="text">
+           <string>半透黑</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="6" column="0">
+       <widget class="QLabel" name="labelLeaveBgColor">
+        <property name="minimumSize">
+         <size>
+          <width>200</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>200</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>离开背景色：</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="labelFontSize">
+        <property name="text">
+         <string>字号：</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="2">
+       <layout class="QHBoxLayout" name="horizontalLayout_StrokeColor">
+        <item>
+         <widget class="QPushButton" name="btnStrokeColor">
+          <property name="styleSheet">
+           <string notr="true">background-color: black;</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="flat">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelStrokeColorDisplay">
+          <property name="text">
+           <string>黑色</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="2" column="2">
+       <layout class="QHBoxLayout" name="horizontalLayout_TextColor">
+        <item>
+         <widget class="QPushButton" name="btnTextColor">
+          <property name="styleSheet">
+           <string notr="true">background-color: white;</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="flat">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelTextColorDisplay">
+          <property name="text">
+           <string>白色</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="6" column="1">
+       <widget class="QCheckBox" name="checkKeepBackground">
+        <property name="maximumSize">
+         <size>
+          <width>30</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBoxOther">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="title">
+      <string>其他设置</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QLabel" name="labelNote">
+        <property name="text">
+         <string>更多设置将在后续版本中添加...</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="frameButtons">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnApply">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>应用(&amp;A)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnCancel">
+        <property name="text">
+         <string>取消(&amp;C)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnOk">
+        <property name="text">
+         <string>确定(&amp;O)</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

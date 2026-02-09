@@ -1,0 +1,131 @@
+*{
+    background:#2e2f37;
+    color: #bbbbbb ;
+}
+
+/* 顶部标题栏样式 */
+QFrame#frameHeader {
+   /* background: transparent;  透明背景 */
+    background-color: #2e2f37 !important; /* 强制使用相同背景色 */
+    border: none; /* 无边框 */
+    border-bottom: 1px solid #444444; /* 添加底部边框区分，可选 */
+    border-radius: 0px;
+}
+
+/* 播放列表标题标签 */
+QPushButton#btnListTitle {
+    color: #aaaaaa; /* 白色文字 */
+    font-size: 14px; /* 与列表文字大小相同 */
+    font-weight: bold; /* 保持粗体 */
+    background: transparent; /* 透明背景 */
+    border: none; /* 无边框 */
+}
+
+/* 列表索引标签 */
+QLabel#labelIndex {
+    color: #888888; /* 白色文字 */
+    font-size: 12px; /* 与列表文字大小相同 */
+    font-family: "Microsoft YaHei", "微软雅黑", sans-serif; /* 明确指定字体 */
+    background: transparent; /* 透明背景 */
+    border: none; /* 无边框 */
+    padding-left: 6px; /* 右边留点间距 */
+}
+
+QPushButton{
+    color:  #b0b0b0;
+    outline: none;
+}
+QPushButton:hover{
+    color:  Cyan;
+}
+QPushButton:pressed {
+    color:  CadetBlue;
+}
+
+/*****列表*******/
+QListWidget{
+     border: 1px solid Black;
+    font-size: 12px;
+     alternate-background-color: #3a3b42; /* 添加交替行背景色 */
+     show-decoration-selected: 1; /* 确保选中项显示完整 */
+}
+QListWidget::item{
+    background: transparent;
+    height: 24px; /* 设置固定的行高 */
+    padding: 0px; /* 确保内边距为0 */
+    margin: 0px; /* 确保外边距为0 */
+    border: none; /* 确保默认无边框 */
+}
+QListWidget::item:hover{
+    color: Cyan;
+    border: 1px solid Cyan;
+    background: transparent; /* 悬停时也保持透明 */
+    margin: 0px; /* 悬停时外边距为0 */
+    padding: 0px; /* 悬停时内边距为0 */
+}
+QListWidget::item:selected {
+    background: rgb(5, 146, 186);
+    color: black;
+    border: 0px solid rgb(5, 146, 186);
+    margin: 0px; /* 选中时外边距为0 */
+    padding: 0px; /* 选中时内边距为0 */
+}
+
+/* 修复滚动条设置 */
+QScrollBar:vertical {
+    width: 10px;
+    background: #202020;
+    border: none;
+}
+QScrollBar::handle:vertical {
+    min-height: 20px; /* 减小滚动条手柄最小高度 */
+    background: #414141;
+    margin: 0px 3px; /* 移除滚动条手柄的边距 */
+    border-radius: 2px;
+}
+QScrollBar::handle:vertical:hover {
+    background: rgb(80, 80, 80);
+   margin: 0px 2px;
+}
+QScrollBar::sub-line:vertical {
+    height: 0px;
+    background: transparent;
+    image: url(:/Black/arrowTop);
+    subcontrol-position: top;
+}
+QScrollBar::add-line:vertical {
+    height: 0px;
+    background: transparent;
+    image: url(:/Black/arrowBottom);
+    subcontrol-position: bottom;
+}
+QScrollBar::sub-line:vertical:hover {
+    background: rgb(68, 69, 73);
+}
+QScrollBar::add-line:vertical:hover {
+    background: rgb(68, 69, 73);
+}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: transparent;
+}
+/* 设置tooltip样式 */
+QToolTip {
+    background-color: #222227;  /* 背景颜色 - 与播放列表背景相同 */
+    color: #cdcdcd;             /* 文字颜色 - 与播放列表文字颜色相同 */
+    border: 1px solid #444444;  /* 边框颜色 */
+    border-radius: 4px;         /* 圆角 */
+    font-size: 12px;            /* 字体大小 */
+/* 设置内容边距 */
+    qproperty-margin: 4 !important;
+    font-family: "Microsoft YaHei", "Segoe UI", sans-serif; /* 字体 */
+}
+/* 针对播放列表的特殊设置 */
+QListWidget::item QToolTip {
+    color: #cdcdcd !important; 
+    background-color: #202020 !important;
+    padding: 4px !important;               /* 内边距 */
+    border: 1px solid #444444 !important;  /* 边框颜色 */
+    color: #bdbdbd !important;
+/* 设置内容边距 */
+    qproperty-margin: 4 !important;
+}

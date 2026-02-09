@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWid</class>
+ <widget class="QMainWindow" name="MainWid">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>500</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout_3">
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <item row="0" column="0">
+     <widget class="QWidget" name="ShowCtrlBarPlaylistBgWidget" native="true">
+      <layout class="QGridLayout" name="gridLayout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <item row="1" column="0">
+        <widget class="CtrlBar" name="CtrlBarWid" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>60</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>60</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="Show" name="ShowWid" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>100</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>26</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QWidget" name="PlaylistWid">
+  <property name="minimumSize">
+    <size>
+      <width>0</width>
+      <height>100</height>
+    </size>
+  </property>
+  <property name="maximumSize">
+    <size>
+      <width>16777215</width>
+      <height>16777215</height>
+    </size>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_Playlist">
+    <property name="leftMargin">
+      <number>0</number>
+    </property>
+    <property name="topMargin">
+      <number>0</number>
+    </property>
+    <property name="rightMargin">
+      <number>0</number>
+    </property>
+    <property name="bottomMargin">
+      <number>0</number>
+    </property>
+    <property name="spacing">
+      <number>0</number>
+    </property>
+  </layout>
+</widget>
+  <widget class="QStatusBar" name="statusbar"/>
+<widget class="QWidget" name="TitleWid">
+  <property name="maximumSize">
+    <size>
+      <width>16777215</width>
+      <height>50</height>
+    </size>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_Title">
+    <property name="leftMargin">
+      <number>0</number>
+    </property>
+    <property name="topMargin">
+      <number>0</number>
+    </property>
+    <property name="rightMargin">
+      <number>0</number>
+    </property>
+    <property name="bottomMargin">
+      <number>0</number>
+    </property>
+    <property name="spacing">
+      <number>0</number>
+    </property>
+  </layout>
+</widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>Show</class>
+   <extends>QWidget</extends>
+   <header location="global">show.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CtrlBar</class>
+   <extends>QWidget</extends>
+   <header location="global">ctrlbar.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
