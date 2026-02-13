@@ -12,7 +12,8 @@ QT += concurrent svg
 #DEFINES += _UNICODE WIN64 QT_WIDGETS_LIB
 
 win32 {
-RC_ICONS = xyplayer.ico
+#RC_ICONS = xyplayer.ico
+RC_FILE += icons.rc
 LIBS += -L$$PWD/lib/SDL2-2.0.10/lib/x86 \
     -L$$PWD/lib/ffmpeg-4.2.1-win32-dev/lib \
     -lSDL2 \
@@ -66,13 +67,13 @@ HEADERS += src/customthread.h \
     src/CustomSlider.h \
     src/simplemessagebox.h \
     src/subtitle.h \
+    src/transparentsubtitlewindow.h \
     src/videoctl.h \
     src/mainwid.h \
     src/medialist.h \
     src/title.h \
     src/playlist.h \
     src/show.h \
-    src/transparentsubtitlewindow.h \
     src/ctrlbar.h \
     src/sonic.h
 
@@ -86,13 +87,13 @@ SOURCES += src/main.cpp \
     src/settingwid.cpp \
     src/simplemessagebox.cpp \
     src/subtitle.cpp \
+    src/transparentsubtitlewindow.cpp \
     src/videoctl.cpp \
     src/ctrlbar.cpp \
     src/mainwid.cpp \
     src/medialist.cpp \
     src/playlist.cpp \
     src/show.cpp \
-    src/transparentsubtitlewindow.cpp \
     src/title.cpp \
     src/sonic.cpp
 
