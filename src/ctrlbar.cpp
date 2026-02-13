@@ -80,7 +80,8 @@ bool CtrlBar::Init()
         emit SigPlayVolume(dPercent);
         OnVideopVolume(dPercent);
     }
-
+    ui->PlaySlider->setObjectName("PlaySlider");
+    ui->VolumeSlider->setObjectName("VolumeSlider");
     return true;
 
 }

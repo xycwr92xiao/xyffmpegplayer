@@ -527,7 +527,6 @@ void MainWid::mouseMoveEvent(QMouseEvent *event)
             if (ui->ShowWid) {
                 // 调用Show类的更新函数
                 ui->ShowWid->updateSubtitleWindowPosition();
-                qDebug() << "拖动窗口，更新字幕位置------";
             }
         }
         // 如果正在调整大小，不处理移动窗口
