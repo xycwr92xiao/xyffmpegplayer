@@ -1869,12 +1869,13 @@ VideoState* VideoCtl::stream_open(const char *filename)
     init_clock(&is->extclk, &is->extclk.serial);
     is->audio_clock_serial = -1;
     //音量
-    //if (startup_volume < 0)av_log(NULL, AV_LOG_WARNING, "-volume=%d < 0, setting to 0\n", startup_volume);
-    //if (startup_volume > 100)av_log(NULL, AV_LOG_WARNING, "-volume=%d > 100, setting to 100\n", startup_volume);
-    startup_volume = av_clip(startup_volume, 0, 100);
-    startup_volume = av_clip(SDL_MIX_MAXVOLUME * startup_volume / 100, 0, SDL_MIX_MAXVOLUME);
+//    qDebug() << " 1startup_volume = " << startup_volume;
+//    //if (startup_volume < 0)av_log(NULL, AV_LOG_WARNING, "-volume=%d < 0, setting to 0\n", startup_volume);
+//    //if (startup_volume > 100)av_log(NULL, AV_LOG_WARNING, "-volume=%d > 100, setting to 100\n", startup_volume);
+//    startup_volume = av_clip(startup_volume, 0, 100);
+//    startup_volume = av_clip(SDL_MIX_MAXVOLUME * startup_volume / 100, 0, SDL_MIX_MAXVOLUME);
     is->audio_volume = startup_volume;
-    qDebug() << " startup_volume = " << startup_volume;
+    qDebug() << " 2startup_volume = " << startup_volume;
     emit SigVideoVolume(startup_volume * 1.0 / SDL_MIX_MAXVOLUME);
     emit SigPauseStat(is->paused);
 
@@ -2192,8 +2193,9 @@ int VideoCtl::video_open(VideoState *is)
         window = SDL_CreateWindowFrom((void *)play_wid);
         SDL_GetWindowSize(window, &w, &h);//初始宽高设置为显示控件宽高
         SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-        qDebug() << "第一次打开视频窗口  1" << window;
-
+        qDebug() << "第一次打开视频窗口  w:" << w << " h:" << h;
+//        screen_width = w;   // 更新成员变量
+//                screen_height = h;
     }
     if (window){
         // 检查窗口是否仍然有效
@@ -2201,7 +2203,7 @@ int VideoCtl::video_open(VideoState *is)
         if ((flags & SDL_WINDOW_SHOWN) == 0) {
             SDL_ShowWindow(window);
         }
-        SDL_SetWindowSize(window, w, h);
+        //SDL_SetWindowSize(window, w, h);
         SDL_RendererInfo info;
         if (!renderer)
             renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -2746,15 +2748,15 @@ void VideoCtl::extractAudioMetadata(AVFormatContext* formatCtx)
     }
 
     // 调试信息
-    qDebug() << "提取音频元数据:";
-    qDebug() << "  标题:" << title;
-    qDebug() << "  艺术家:" << artist;
-    qDebug() << "  专辑:" << album;
-    qDebug() << "  流派:" << genre;
-    qDebug() << "  年份:" << year;
-    qDebug() << "  比特率:" << bitrate << "kbps";
-    qDebug() << "  采样率:" << sampleRate << "Hz";
-    qDebug() << "  文件比特率:" << formatCtx->bit_rate << "bps";
+//    qDebug() << "提取音频元数据:";
+//    qDebug() << "  标题:" << title;
+//    qDebug() << "  艺术家:" << artist;
+//    qDebug() << "  专辑:" << album;
+//    qDebug() << "  流派:" << genre;
+//    qDebug() << "  年份:" << year;
+//    qDebug() << "  比特率:" << bitrate << "kbps";
+//    qDebug() << "  采样率:" << sampleRate << "Hz";
+//    qDebug() << "  文件比特率:" << formatCtx->bit_rate << "bps";
 
     // 发射元数据信号
     emit SigAudioMetadataReceived(title, artist, album, genre, year, bitrate, sampleRate);

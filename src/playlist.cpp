@@ -604,6 +604,7 @@ void Playlist::on_List_itemDoubleClicked(QListWidgetItem *item)
         GlobalVars::currentPlayIndex() = index;
         ui->List->setCurrentRow(index);
         GlobalVars::selectedIndex() = index;
+        m_nCurrentPlayListIndex = index;
     // 方法2：更精确地只更新受影响的行（推荐）
     if (prevPlayingIndex >= 0 && prevPlayingIndex < ui->List->count()) {
         // 更新之前播放的行

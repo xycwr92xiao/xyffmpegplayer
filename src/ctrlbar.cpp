@@ -153,7 +153,6 @@ void CtrlBar::OnVideopVolume(double dPercent)
 {
     ui->VolumeSlider->setValue(dPercent * MAX_SLIDER_VALUE);
     m_dLastVolumePercent = dPercent;
-
     if (m_dLastVolumePercent == 0)
     {
         GlobalHelper::SetIcon(ui->VolumeBtn, 12, QChar(0xf026));
@@ -162,7 +161,6 @@ void CtrlBar::OnVideopVolume(double dPercent)
     {
         GlobalHelper::SetIcon(ui->VolumeBtn, 12, QChar(0xf028));
     }
-
     GlobalHelper::SavePlayVolume(dPercent);
 }
 

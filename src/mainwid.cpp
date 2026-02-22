@@ -418,7 +418,7 @@ void MainWid::processCommandLineFile()
     for (const QString &file : m_commandLineFiles) {
         qDebug() << index++ << ":" << file;
     }
-    GlobalHelper::haveCommandLine()=0;
+    GlobalHelper::haveCommandLine()=true;
     emit SigAppendItemTotop(m_commandLineFiles,0);
 }
 
