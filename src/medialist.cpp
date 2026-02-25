@@ -527,228 +527,301 @@ void MediaList::OpenFileLocation()
 void MediaList::ShowFileInfo()
 {
     int currentIndex = currentRow();
-       if (currentIndex < 0){return;}
-          QListWidgetItem *item = this->item(currentIndex);
-       if (!item){return;}
-       QString filePath = item->toolTip();
-       QFileInfo fileInfo(filePath);
-          // 检查文件是否存在
-       if (!fileInfo.exists()){
-           QMessageBox::warning(this, "错误",
-           QString("文件不存在或已被删除！\n\n%1").arg(fileInfo.fileName()));
-           return;
-       }
-
-       // 初始化FFmpeg
-       avformat_network_init();
-       AVFormatContext *formatContext = nullptr;
-       // 打开媒体文件
-       int ret = avformat_open_input(&formatContext, filePath.toUtf8().constData(), nullptr, nullptr);
-       if (ret < 0)
-       {
-           QMessageBox::warning(this, "错误", "无法打开媒体文件，可能不是有效的媒体格式。");
-           return;
-       }
-       // 获取流信息
-       if (avformat_find_stream_info(formatContext, nullptr) < 0)
-       {
-           avformat_close_input(&formatContext);
-           QMessageBox::warning(this, "错误", "无法获取媒体文件流信息。");
-           return;
-       }
-       // 获取媒体信息
-       int64_t duration = formatContext->duration / AV_TIME_BASE; // 转换为秒
-       int hours = duration / 3600;
-       int minutes = (duration % 3600) / 60;
-       int seconds = duration % 60;
-
-       QString durationStr;
-       if (hours > 0)
-           durationStr = QString("%1:%2:%3").arg(hours, 2, 10, QChar('0'))
-                   .arg(minutes, 2, 10, QChar('0'))
-                   .arg(seconds, 2, 10, QChar('0'));
-       else
-           durationStr = QString("%1:%2").arg(minutes, 2, 10, QChar('0'))
-                   .arg(seconds, 2, 10, QChar('0'));
-
-       // 遍历所有流，寻找视频和音频流
-       int videoStreamIndex = -1;
-       int audioStreamIndex = -1;
-       AVStream *videoStream = nullptr;
-       AVStream *audioStream = nullptr;
-       AVCodecParameters *videoCodecParams = nullptr;
-       AVCodecParameters *audioCodecParams = nullptr;
-
-       for (unsigned int i = 0; i < formatContext->nb_streams; i++)
-       {
-           if (formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
-           {
-               if (videoStreamIndex == -1) // 只取第一个视频流
-               {
-                   videoStreamIndex = i;
-                   videoStream = formatContext->streams[i];
-                   videoCodecParams = videoStream->codecpar;
-               }
-           }
-           else if (formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)
-           {
-               if (audioStreamIndex == -1) // 只取第一个音频流
-               {
-                   audioStreamIndex = i;
-                   audioStream = formatContext->streams[i];
-                   audioCodecParams = audioStream->codecpar;
-               }
-           }
-       }
-
-    // 创建纯文本信息（用于复制）
-    QString plainText = "媒体文件信息\n";
-    plainText += QString("=").repeated(40) + "\n\n";
-    plainText += "基本信息:\n";
-    plainText += QString("-").repeated(20) + "\n";
-    plainText += QString("文件名: %1\n").arg(fileInfo.fileName());
-    plainText += QString("路径: %1\n").arg(fileInfo.absoluteFilePath());
-    double fileSizeMB = fileInfo.size() / (1024.0 * 1024.0);
-    plainText += QString("大小: %1 MB\n").arg(fileSizeMB, 0, 'f', 2);
-
-    plainText += QString("创建时间: %1\n").arg(fileInfo.created().toString("yyyy-MM-dd HH:mm:ss"));
-    plainText += QString("修改时间: %1\n").arg(fileInfo.lastModified().toString("yyyy-MM-dd HH:mm:ss"));
-    plainText += "\n" + QString("-").repeated(40) + "\n";
-//------------------------------------------------------------------------------
-    // 使用简单表格布局的HTML（更兼容的方案）
-    QString htmlText;
-    htmlText += "<html><head><style>";
-
-    // 使用更简单的CSS - Qt支持的属性
-    htmlText += "body { font-family: 'Microsoft YaHei', Arial, sans-serif; background-color: #2a2a2a; margin: 0px; color: #e0e0e0; }";
-    htmlText += "h1 { color: #4CAF50; text-align: center; margin-bottom: 15px; font-size: 18px; text-shadow: 0 0 5px rgba(76, 175, 80, 0.3); }";
-    htmlText += "h2 { color: #64B5F6; margin-top: 15px; margin-bottom: 8px; font-size: 14px; border-bottom: 1px solid #3a3a3a; padding-bottom: 5px; }";
-    htmlText += ".info-table { width: 100%; border-collapse: collapse; margin-bottom: 1px; }";
-    htmlText += ".info-table td { padding: 4px 8px; vertical-align: top; }";
-    htmlText += ".label { color: #aaa; width: 35%; font-weight: normal; }";
-    htmlText += ".value { color: #fff; }";
-    htmlText += ".highlight { color: #4CAF50; font-weight: bold; }";  // 红色改为绿色
-    htmlText += "</style></head><body>";
-    // 标题
-    htmlText += "<h1>媒体文件信息</h1>";
-    htmlText += "<table width='100%' cellpadding='0' cellspacing='10'>";
-    htmlText += "  <tr><td width='100%' valign='top'>";
-    // 基本信息
-    htmlText += "<h2>基本信息</h2>";
-    htmlText += "<table class='info-table'>";
-    htmlText += QString("<tr><td class='label'>文件名：</td><td class='value'>%1</td></tr>")
-                .arg(fileInfo.fileName().toHtmlEscaped());
-    htmlText += QString("<tr><td class='label'>路径：</td><td class='value'>%1</td></tr>")
-                .arg(fileInfo.absoluteFilePath().toHtmlEscaped());
-    htmlText += QString("<tr><td class='label'>大小：</td><td class='value highlight'>%1 MB</td></tr>")
-                .arg(QString::number(fileSizeMB, 'f', 2));
-    htmlText += QString("<tr><td class='label'>创建时间：</td><td class='value'>%1</td></tr>")
-                .arg(fileInfo.created().toString("yyyy-MM-dd HH:mm:ss").toHtmlEscaped());
-    htmlText += QString("<tr><td class='label'>修改时间：</td><td class='value'>%1</td></tr>")
-                .arg(fileInfo.lastModified().toString("yyyy-MM-dd HH:mm:ss").toHtmlEscaped());
-    htmlText += "</table></td></tr>";
-    htmlText += "</table>";
-
-    // 两栏布局（使用两个表格并排）
-    htmlText += "<table width='100%' cellpadding='0' cellspacing='10'><tr>";
-//=================================================================================
-    if (videoStreamIndex != -1 && videoCodecParams)
-    {
-        htmlText += "<td width='50%' valign='top'>";
-        htmlText += "<h2>视频信息</h2>";
-        htmlText += "<table class='info-table'>";
-        htmlText += QString("<tr><td class='label'>时长：</td><td class='value highlight'>%1</td></tr>")
-                    .arg(durationStr.toHtmlEscaped());
-        htmlText += QString("<tr><td class='label'>分辨率：</td><td class='value highlight'>%1 × %2</td></tr>")
-                    .arg(videoCodecParams->width).arg(videoCodecParams->height);
-        plainText += "视频信息:\n";
-        plainText += QString("-").repeated(20) + "\n";
-        plainText += QString("时长: %1\n").arg(durationStr);
-        plainText += QString("分辨率: %1 × %2 像素\n").arg(videoCodecParams->width).arg(videoCodecParams->height);
-
-        const AVCodecDescriptor *codecDesc = avcodec_descriptor_get(videoCodecParams->codec_id);
-        if (codecDesc){
-            plainText += QString("视频编码: %1\n").arg(codecDesc->name);
-            htmlText += QString("<tr><td class='label'>编码：</td><td class='value'>%1</td></tr>")
-                        .arg(codecDesc->name);
-        }
-        if (videoCodecParams->bit_rate > 0)
-        {
-            double videoBitrateKBps = videoCodecParams->bit_rate / 1000.0;
-            plainText += QString("视频码率: %1 kbps\n").arg(videoBitrateKBps, 0, 'f', 2);
-            htmlText += QString("<tr><td class='label'>码率：</td><td class='value highlight'>%1 kbps</td></tr>")
-                        .arg(QString::number(videoBitrateKBps, 'f', 1));
-        }
-
-        if (videoStream->avg_frame_rate.num > 0 && videoStream->avg_frame_rate.den > 0)
-        {
-            double fps = av_q2d(videoStream->avg_frame_rate);
-            plainText += QString("帧率: %1 帧/秒\n").arg(fps, 0, 'f', 2);
-            htmlText += QString("<tr><td class='label'>帧率：</td><td class='value highlight'>%1 fps</td></tr>")
-                        .arg(QString::number(fps, 'f', 2));
-        }
-        plainText += "\n" + QString("-").repeated(40) + "\n";
-        htmlText += "</table>";
-        htmlText += "</td>";
+    if (currentIndex < 0) return;
+    QListWidgetItem *item = this->item(currentIndex);
+    if (!item) return;
+    QString filePath = item->toolTip();
+    QFileInfo fileInfo(filePath);
+    if (!fileInfo.exists()) {
+        QMessageBox::warning(this, "错误",
+            QString("文件不存在或已被删除！\n\n%1").arg(fileInfo.fileName()));
+        return;
     }
 
-    if (audioStreamIndex != -1 && audioCodecParams)
-    {
-        htmlText += "<td width='50%' valign='top'>";
-        htmlText += "<h2>音频信息</h2>";
-        htmlText += "<table class='info-table'>";
-
-        plainText += "音频信息:\n";
-        plainText += QString("-").repeated(20) + "\n";
-
-        const AVCodecDescriptor *audioCodecDesc = avcodec_descriptor_get(audioCodecParams->codec_id);
-        if (audioCodecDesc){
-            plainText += QString("音频编码: %1\n").arg(audioCodecDesc->name);
-        htmlText += QString("<tr><td class='label'>编码：</td><td class='value'>%1</td></tr>")
-                    .arg(audioCodecDesc->name);
-        }
-        if (audioCodecParams->bit_rate > 0)
-        {
-            double audioBitrateKBps = audioCodecParams->bit_rate / 1000.0;
-            plainText += QString("音频比特率: %1 kbps\n").arg(audioBitrateKBps, 0, 'f', 2);
-            htmlText += QString("<tr><td class='label'>码率：</td><td class='value highlight'>%1 kbps</td></tr>")
-                        .arg(QString::number(audioBitrateKBps, 'f', 1));
-        }
-
-        if (audioCodecParams->channels > 0)
-        {
-            QString channelStr;
-            switch (audioCodecParams->channels)
-            {
-                case 1: channelStr = "单声道"; break;
-                case 2: channelStr = "立体声"; break;
-                case 4: channelStr = "4.0声道"; break;
-                case 6: channelStr = "5.1声道"; break;
-                case 8: channelStr = "7.1声道"; break;
-                default: channelStr = QString("%1声道").arg(audioCodecParams->channels); break;
-            }
-            plainText += QString("声道: %1\n").arg(channelStr);
-            htmlText += QString("<tr><td class='label'>声道：</td><td class='value highlight'>%1</td></tr>")
-                        .arg(channelStr.toHtmlEscaped());
-        }
-
-        if (audioCodecParams->sample_rate > 0){
-            plainText += QString("采样率: %1 Hz\n").arg(audioCodecParams->sample_rate);
-        htmlText += QString("<tr><td class='label'>采样率：</td><td class='value highlight'>%1 Hz</td></tr>")
-                    .arg(QString::number(audioCodecParams->sample_rate));
-        }
-        htmlText += "</table>";
-        htmlText += "</td>";
-        plainText += "\n" + QString("-").repeated(40) + "\n";
+    // 初始化FFmpeg
+    avformat_network_init();
+    AVFormatContext *formatContext = nullptr;
+    int ret = avformat_open_input(&formatContext, filePath.toUtf8().constData(), nullptr, nullptr);
+    if (ret < 0) {
+        QMessageBox::warning(this, "错误", "无法打开媒体文件，可能不是有效的媒体格式。");
+        return;
+    }
+    if (avformat_find_stream_info(formatContext, nullptr) < 0) {
+        avformat_close_input(&formatContext);
+        QMessageBox::warning(this, "错误", "无法获取媒体文件流信息。");
+        return;
     }
 
-    // 关闭FFmpeg资源
+    // 数据结构：存储所有媒体信息，使用 shared_ptr 便于在多处共享
+    struct FileInfoData {
+         QPointer<QTimer> timer;   // 新增：指向动态更新定时器的安全指针
+        QString fileName;
+        QString filePath;
+        double fileSizeMB = 0;
+        QDateTime created;
+        QDateTime modified;
+        QString durationStr;
+        // 视频信息
+        bool hasVideo = false;
+        int videoWidth = 0, videoHeight = 0;
+        QString videoCodec;
+        double videoBitrate = 0;      // kbps
+        double videoFps = 0;
+        // 音频信息
+        bool hasAudio = false;
+        QString audioCodec;
+        double audioBitrate = 0;      // kbps
+        int audioChannels = 0;
+        int audioSampleRate = 0;
+        // 帧信息（初始为空）
+        bool hasFrameInfo = false;
+        int iCount = 0, pCount = 0, bCount = 0;
+        double avgGop = 0.0, maxGop = 0.0;
+        // 辅助：视频流索引，用于后续重新打开时获取帧信息
+        int videoStreamIndex = -1;
+        // 文件路径的UTF-8字节数组，确保字符串生命周期
+        QByteArray filePathUtf8;
+
+        // 新增：获取帧信息时的状态
+        bool isFetching = false;
+        bool isStop =false;
+        int fetchingDots = 1;          // 用于动态显示点个数
+    };
+
+    auto data = std::make_shared<FileInfoData>();
+    data->fileName = fileInfo.fileName();
+    data->filePath = fileInfo.absoluteFilePath();
+    data->fileSizeMB = fileInfo.size() / (1024.0 * 1024.0);
+    data->created = fileInfo.birthTime();
+    data->modified = fileInfo.lastModified();
+    data->filePathUtf8 = filePath.toUtf8();
+
+    // 时长
+    int64_t duration = formatContext->duration / AV_TIME_BASE;
+    int hours = duration / 3600;
+    int minutes = (duration % 3600) / 60;
+    int seconds = duration % 60;
+    if (hours > 0)
+        data->durationStr = QString("%1:%2:%3").arg(hours, 2, 10, QChar('0'))
+                .arg(minutes, 2, 10, QChar('0'))
+                .arg(seconds, 2, 10, QChar('0'));
+    else
+        data->durationStr = QString("%1:%2").arg(minutes, 2, 10, QChar('0'))
+                .arg(seconds, 2, 10, QChar('0'));
+
+    // 遍历流，提取视频/音频基本信息
+    for (unsigned int i = 0; i < formatContext->nb_streams; i++) {
+        AVStream *stream = formatContext->streams[i];
+        AVCodecParameters *codecParams = stream->codecpar;
+        if (codecParams->codec_type == AVMEDIA_TYPE_VIDEO && !data->hasVideo) {
+            data->hasVideo = true;
+            data->videoStreamIndex = i;
+            data->videoWidth = codecParams->width;
+            data->videoHeight = codecParams->height;
+            const AVCodecDescriptor *codecDesc = avcodec_descriptor_get(codecParams->codec_id);
+            if (codecDesc) data->videoCodec = QString::fromUtf8(codecDesc->name);
+            if (codecParams->bit_rate > 0)
+                data->videoBitrate = codecParams->bit_rate / 1000.0;
+            if (stream->avg_frame_rate.num > 0 && stream->avg_frame_rate.den > 0)
+                data->videoFps = av_q2d(stream->avg_frame_rate);
+        }
+        else if (codecParams->codec_type == AVMEDIA_TYPE_AUDIO && !data->hasAudio) {
+            data->hasAudio = true;
+            const AVCodecDescriptor *codecDesc = avcodec_descriptor_get(codecParams->codec_id);
+            if (codecDesc) data->audioCodec = QString::fromUtf8(codecDesc->name);
+            if (codecParams->bit_rate > 0)
+                data->audioBitrate = codecParams->bit_rate / 1000.0;
+            data->audioChannels = codecParams->channels;
+            data->audioSampleRate = codecParams->sample_rate;
+        }
+    }
+
+    // 关闭formatContext，后续点击按钮时再重新打开只用于遍历帧
     avformat_close_input(&formatContext);
-//--------------------------------------------------------数据获取完毕
-    htmlText += "</tr></table>";
-    htmlText += "</body></html>";
-    plainText=htmlText;
-    // 在创建对话框后添加以下代码：
+
+    // ========== 构建HTML的函数 ==========
+    auto buildHtml = [](std::shared_ptr<FileInfoData> d) -> QString {
+        QString html;
+        html += "<html><head><style>";
+        html += "body { font-family: 'Microsoft YaHei', Arial, sans-serif; background-color: #2a2a2a; margin: 0px; color: #e0e0e0; }";
+        html += "h1 { color: #4CAF50; text-align: center; margin-bottom: 15px; font-size: 18px; text-shadow: 0 0 5px rgba(76, 175, 80, 0.3); }";
+        html += "h2 { color: #64B5F6; margin-top: 15px; margin-bottom: 8px; font-size: 14px; border-bottom: 1px solid #3a3a3a; padding-bottom: 5px; }";
+        html += ".info-table { width: 100%; border-collapse: collapse; margin-bottom: 1px; }";
+        html += ".info-table td { padding: 4px 8px; vertical-align: top; }";
+        html += ".label { color: #aaa; width: 35%; font-weight: normal; }";
+        html += ".value { color: #fff; }";
+        html += ".highlight { color: #4CAF50; font-weight: bold; }";
+        html += "a { color: #4CAF50; text-decoration: none; }";
+        html += "a:hover { text-decoration: underline; }";
+        html += "</style></head><body>";
+        html += "<h1>媒体文件信息</h1>";
+        html += "<table width='100%' cellpadding='0' cellspacing='10'>";
+        html += "  <tr><td width='100%' valign='top'>";
+        html += "<h2>基本信息</h2>";
+        html += "<table class='info-table'>";
+        html += QString("<tr><td class='label'>文件名：</td><td class='value'>%1</td></tr>")
+                .arg(d->fileName.toHtmlEscaped());
+        html += QString("<tr><td class='label'>路径：</td><td class='value'>%1</td></tr>")
+                .arg(d->filePath.toHtmlEscaped());
+        html += QString("<tr><td class='label'>大小：</td><td class='value highlight'>%1 MB</td></tr>")
+                .arg(QString::number(d->fileSizeMB, 'f', 2));
+        html += QString("<tr><td class='label'>创建时间：</td><td class='value'>%1</td></tr>")
+                .arg(d->created.toString("yyyy-MM-dd HH:mm:ss").toHtmlEscaped());
+        html += QString("<tr><td class='label'>修改时间：</td><td class='value'>%1</td></tr>")
+                .arg(d->modified.toString("yyyy-MM-dd HH:mm:ss").toHtmlEscaped());
+        html += "</table></td></tr>";
+        html += "</table>";
+
+        html += "<table width='100%' cellpadding='0' cellspacing='10'><tr>";
+
+        if (d->hasVideo) {
+            html += "<td width='50%' valign='top'>";
+            html += "<h2>视频信息</h2>";
+            html += "<table class='info-table'>";
+            html += QString("<tr><td class='label'>时长：</td><td class='value highlight'>%1</td></tr>")
+                    .arg(d->durationStr.toHtmlEscaped());
+            html += QString("<tr><td class='label'>分辨率：</td><td class='value highlight'>%1 × %2</td></tr>")
+                    .arg(d->videoWidth).arg(d->videoHeight);
+            if (!d->videoCodec.isEmpty()) {
+                html += QString("<tr><td class='label'>编码：</td><td class='value'>%1</td></tr>")
+                        .arg(d->videoCodec.toHtmlEscaped());
+            }
+            if (d->videoBitrate > 0) {
+                html += QString("<tr><td class='label'>码率：</td><td class='value highlight'>%1 kbps</td></tr>")
+                        .arg(QString::number(d->videoBitrate, 'f', 1));
+            }
+            if (d->videoFps > 0) {
+                html += QString("<tr><td class='label'>帧率：</td><td class='value highlight'>%1 fps</td></tr>")
+                        .arg(QString::number(d->videoFps, 'f', 2));
+            }
+            // 帧信息行：根据状态显示
+                int totalFrames = d->iCount + d->pCount + d->bCount;
+            if (d->isFetching) {
+                // 正在获取，动态显示点
+                QString dots = QString(".").repeated(d->fetchingDots);
+                html += QString("<tr><td class='label'>帧信息：</td><td class='value'><a href='stop-getframeinfo'>正在获取%1 %2(I:%3,P:%4,B:%5)</a></td></tr>")
+                        .arg(dots).arg(totalFrames).arg(d->iCount).arg(d->pCount).arg(d->bCount);
+            } else if (d->hasFrameInfo) {
+                html += QString("<tr><td class='label'>总帧数：</td><td class='value'><a href='reget-frame-info'>%1 (I:%2,P:%3,B:%4)</a></td></tr>")
+                        .arg(totalFrames).arg(d->iCount).arg(d->pCount).arg(d->bCount);
+                if (d->avgGop > 0) {
+                    html += QString("<tr><td class='label'>I帧间隔：</td><td class='value'>平均 %1s，最大 %2s</td></tr>")
+                            .arg(QString::number(d->avgGop, 'f', 2))
+                            .arg(QString::number(d->maxGop, 'f', 2));
+                } else {
+                    html += QString("<tr><td class='label'>I帧间隔：</td><td class='value'>N/A</td></tr>");
+                }
+            } else {
+                // 未获取，显示可点击链接
+                html += QString("<tr><td class='label'>帧信息：</td><td class='value'><a href='get-frame-info' style='color:#4CAF50;'>点击获取</a></td></tr>");
+            }
+            html += "</table>";
+            html += "</td>";
+        }
+
+        if (d->hasAudio) {
+            html += "<td width='50%' valign='top'>";
+            html += "<h2>音频信息</h2>";
+            html += "<table class='info-table'>";
+            if (!d->audioCodec.isEmpty()) {
+                html += QString("<tr><td class='label'>编码：</td><td class='value'>%1</td></tr>")
+                        .arg(d->audioCodec.toHtmlEscaped());
+            }
+            if (d->audioBitrate > 0) {
+                html += QString("<tr><td class='label'>码率：</td><td class='value highlight'>%1 kbps</td></tr>")
+                        .arg(QString::number(d->audioBitrate, 'f', 1));
+            }
+            if (d->audioChannels > 0) {
+                QString channelStr;
+                switch (d->audioChannels) {
+                    case 1: channelStr = "单声道"; break;
+                    case 2: channelStr = "立体声"; break;
+                    case 4: channelStr = "4.0声道"; break;
+                    case 6: channelStr = "5.1声道"; break;
+                    case 8: channelStr = "7.1声道"; break;
+                    default: channelStr = QString("%1声道").arg(d->audioChannels); break;
+                }
+                html += QString("<tr><td class='label'>声道：</td><td class='value highlight'>%1</td></tr>")
+                        .arg(channelStr.toHtmlEscaped());
+            }
+            if (d->audioSampleRate > 0) {
+                html += QString("<tr><td class='label'>采样率：</td><td class='value highlight'>%1 Hz</td></tr>")
+                        .arg(QString::number(d->audioSampleRate));
+            }
+            html += "</table>";
+            html += "</td>";
+        }
+
+        html += "</tr></table>";
+        html += "</body></html>";
+        return html;
+    };
+
+    // ========== 构建纯文本的函数（用于复制） ==========
+    auto buildPlainText = [](std::shared_ptr<FileInfoData> d) -> QString {
+        QString text = "媒体文件信息\n";
+        text += QString("=").repeated(40) + "\n\n";
+        text += "基本信息:\n";
+        text += QString("-").repeated(20) + "\n";
+        text += QString("文件名: %1\n").arg(d->fileName);
+        text += QString("路径: %1\n").arg(d->filePath);
+        text += QString("大小: %1 MB\n").arg(d->fileSizeMB, 0, 'f', 2);
+        text += QString("创建时间: %1\n").arg(d->created.toString("yyyy-MM-dd HH:mm:ss"));
+        text += QString("修改时间: %1\n").arg(d->modified.toString("yyyy-MM-dd HH:mm:ss"));
+        text += "\n" + QString("-").repeated(40) + "\n";
+
+        if (d->hasVideo) {
+            text += "视频信息:\n";
+            text += QString("-").repeated(20) + "\n";
+            text += QString("时长: %1\n").arg(d->durationStr);
+            text += QString("分辨率: %1 × %2 像素\n").arg(d->videoWidth).arg(d->videoHeight);
+            if (!d->videoCodec.isEmpty())
+                text += QString("视频编码: %1\n").arg(d->videoCodec);
+            if (d->videoBitrate > 0)
+                text += QString("视频码率: %1 kbps\n").arg(d->videoBitrate, 0, 'f', 2);
+            if (d->videoFps > 0)
+                text += QString("帧率: %1 帧/秒\n").arg(d->videoFps, 0, 'f', 2);
+            // 帧信息（仅当已获取时才加入文本）
+            if (d->hasFrameInfo) {
+                int totalFrames = d->iCount + d->pCount + d->bCount;
+                text += QString("帧数: %1 (I:%2, P:%3, B:%4)\n")
+                        .arg(totalFrames).arg(d->iCount).arg(d->pCount).arg(d->bCount);
+                if (d->avgGop > 0)
+                    text += QString("I帧间隔: 平均 %1 s, 最大 %2 s\n")
+                            .arg(d->avgGop, 0, 'f', 2).arg(d->maxGop, 0, 'f', 2);
+                else
+                    text += "I帧间隔: N/A\n";
+            }
+            text += "\n" + QString("-").repeated(40) + "\n";
+        }
+
+        if (d->hasAudio) {
+            text += "音频信息:\n";
+            text += QString("-").repeated(20) + "\n";
+            if (!d->audioCodec.isEmpty())
+                text += QString("音频编码: %1\n").arg(d->audioCodec);
+            if (d->audioBitrate > 0)
+                text += QString("音频比特率: %1 kbps\n").arg(d->audioBitrate, 0, 'f', 2);
+            if (d->audioChannels > 0) {
+                QString channelStr;
+                switch (d->audioChannels) {
+                    case 1: channelStr = "单声道"; break;
+                    case 2: channelStr = "立体声"; break;
+                    case 4: channelStr = "4.0声道"; break;
+                    case 6: channelStr = "5.1声道"; break;
+                    case 8: channelStr = "7.1声道"; break;
+                    default: channelStr = QString("%1声道").arg(d->audioChannels); break;
+                }
+                text += QString("声道: %1\n").arg(channelStr);
+            }
+            if (d->audioSampleRate > 0)
+                text += QString("采样率: %1 Hz\n").arg(d->audioSampleRate);
+            text += "\n" + QString("-").repeated(40) + "\n";
+        }
+        return text;
+    };
+
+    // 创建对话框
     QDialog *infoDialog = new QDialog(this->window());
     infoDialog->setWindowTitle("媒体文件信息");
     infoDialog->resize(600, 550);
@@ -757,7 +830,6 @@ void MediaList::ShowFileInfo()
                                Qt::WindowMinimizeButtonHint);
     infoDialog->setAttribute(Qt::WA_DeleteOnClose);
 
-    // 设置整个对话框的深色样式表
     infoDialog->setStyleSheet(R"(
         QDialog {
             background-color: #1a1a1a;
@@ -777,8 +849,8 @@ void MediaList::ShowFileInfo()
             border-radius: 4px;
             padding: 8px 16px 8px 10px;
             font-size: 14px;
-                              width:60;
-                              height:25;
+            width:60;
+            height:25;
         }
         QPushButton:hover {
             background-color: #3a3a3a;
@@ -791,17 +863,51 @@ void MediaList::ShowFileInfo()
         QPushButton:focus {
             border-color: #4CAF50;
         }
+        /* 修复滚动条设置 */
+        QScrollBar:vertical {
+            width: 10px;
+            background: #202020;
+            border: none;
+        }
+        QScrollBar::handle:vertical {
+            min-height: 20px; /* 减小滚动条手柄最小高度 */
+            background: #414141;
+            margin: 0px 3px; /* 移除滚动条手柄的边距 */
+            border-radius: 2px;
+        }
+        QScrollBar::handle:vertical:hover {
+            background: rgb(80, 80, 80);
+           margin: 0px 2px;
+        }
+        QScrollBar::sub-line:vertical {
+            height: 0px;
+            background: transparent;
+            image: url(:/Black/arrowTop);
+            subcontrol-position: top;
+        }
+        QScrollBar::add-line:vertical {
+            height: 0px;
+            background: transparent;
+            image: url(:/Black/arrowBottom);
+            subcontrol-position: bottom;
+        }
+        QScrollBar::sub-line:vertical:hover {
+            background: rgb(68, 69, 73);
+        }
+        QScrollBar::add-line:vertical:hover {
+            background: rgb(68, 69, 73);
+        }
+        QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+            background: transparent;
+        }
     )");
 
     if (!this->windowIcon().isNull())
         infoDialog->setWindowIcon(this->windowIcon());
 
-    // 使用QTextBrowser（对HTML支持更好）
     QTextBrowser *textBrowser = new QTextBrowser(infoDialog);
-    textBrowser->setHtml(htmlText);
+    textBrowser->setHtml(buildHtml(data));
     textBrowser->setOpenExternalLinks(false);
-
-    // 添加QTextBrowser的额外样式设置
     textBrowser->document()->setDefaultStyleSheet(R"(
         body {
             font-family: 'Microsoft YaHei', Arial, sans-serif;
@@ -811,80 +917,272 @@ void MediaList::ShowFileInfo()
             padding: 10px;
         }
     )");
-
-    // 设置QTextBrowser的视口样式，去除白色边框
     textBrowser->setFrameStyle(QFrame::NoFrame);
     textBrowser->viewport()->setStyleSheet("background-color: #1a1a1a;");
 
-    // 按钮
     QPushButton *copyButton = new QPushButton("复制信息", infoDialog);
     QPushButton *closeButton = new QPushButton("关闭", infoDialog);
-
-    // 设置按钮的焦点策略，避免虚焦点框
     copyButton->setFocusPolicy(Qt::NoFocus);
     closeButton->setFocusPolicy(Qt::NoFocus);
 
-    connect(copyButton, &QPushButton::clicked, [plainText, infoDialog]() {
-        QApplication::clipboard()->setText(plainText);
-        QMessageBox msgBox(infoDialog);
-                msgBox.setWindowTitle("提示");
-                msgBox.setText("媒体文件信息已复制到剪贴板");
-                msgBox.setIcon(QMessageBox::Information);
-                // 设置消息框的样式表，确保文字为白色
-                msgBox.setStyleSheet(R"(
-                    QMessageBox {
-                        background-color: #1a1a1a;
-                        color: white;
-                        font-family: 'Microsoft YaHei', sans-serif;
-                    }
-                    QMessageBox QLabel {
-                        color: white;
-                        font-size: 16px;
-                        padding: 15px 0;  /* 添加上下内边距 */
-                        min-height: 40px;  /* 设置最小高度 */
-                           min-width: 260px;  /* 设置最小高度 */
-                        qproperty-alignment: 'AlignCenter';  /* 水平居中 */
-                    }
-                    QMessageBox QPushButton {
+    // ========== 处理超链接点击（获取帧信息） ==========
+    QPointer<QDialog> dialogPtr(infoDialog); // 用于检查对话框是否存活
 
-                        min-height:25;
-                        background-color: #2a2a2a;
-                        color: white;
-                        border: 1px solid #3a3a3a;
-                        border-radius: 4px;
-                        padding: 6px 12px;
-                        min-width: 70px;
-                        font-size: 12px;
-                        font-family: 'Microsoft YaHei', sans-serif;
-                    }
-                    QMessageBox QPushButton:hover {
-                        background-color: #3a3a3a;
-                    }
-                    QMessageBox QPushButton:pressed {
-                        background-color: #4CAF50;
-                    }
-                )");
-                msgBox.exec();
+    QObject::connect(textBrowser, &QTextBrowser::anchorClicked, infoDialog,
+        [textBrowser, data, buildHtml, dialogPtr](const QUrl &link) mutable {
+            if (link.toString() == "reget-frame-info")
+            {
+                data->isStop =false; data->isFetching = false;data->iCount=0;data->pCount=0;data->bCount=0;}
+            else {
+                if (link.toString() == "stop-getframeinfo")data->isStop =true;
+                if (link.toString() != "get-frame-info") return;
+            }
+            // 如果正在获取中，忽略本次点击
+            if (data->isFetching) return;
+            // 开始获取帧信息
+            data->isFetching = true;
+            data->fetchingDots = 1;
+            textBrowser->setHtml(buildHtml(data));
 
+            // 创建定时器，用于动态更新点
+            data->timer = new QTimer();   // 将定时器设为对话框的子对象
+            data->timer->setInterval(500);
+            QObject::connect(data->timer, &QTimer::timeout, [textBrowser, data, buildHtml]() {
+                if (!data->isFetching) return;      // 已结束，不再更新
+                data->fetchingDots = (data->fetchingDots % 3) + 1;
+                textBrowser->setHtml(buildHtml(data));
+            });
+            data->timer->start();
+
+            // 在后台线程中执行帧遍历
+            QtConcurrent::run([=]() {
+                // 后台线程：重新打开文件，遍历视频帧
+                AVFormatContext *fmtCtx = nullptr;
+                if (avformat_open_input(&fmtCtx, data->filePathUtf8.constData(), nullptr, nullptr) < 0) {
+                    QMetaObject::invokeMethod(qApp, [=]() {
+                        if (!dialogPtr) return; // 对话框已关闭
+                        data->isFetching = false;
+                        data->timer->stop();
+                        data->timer->deleteLater();
+                        textBrowser->setHtml(buildHtml(data));
+                    });
+                    return;
+                }
+                if (avformat_find_stream_info(fmtCtx, nullptr) < 0) {
+                    avformat_close_input(&fmtCtx);
+                    QMetaObject::invokeMethod(qApp, [=]() {
+                        if (!dialogPtr) return;
+                        data->isFetching = false;
+                        data->timer->stop();
+                        data->timer->deleteLater();
+                        textBrowser->setHtml(buildHtml(data));
+                    });
+                    return;
+                }
+
+                // 找到视频流
+                AVStream *videoStream = nullptr;
+                for (unsigned int i = 0; i < fmtCtx->nb_streams; ++i) {
+                    if (fmtCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+                        videoStream = fmtCtx->streams[i];
+                        break;
+                    }
+                }
+
+                if (!videoStream) {
+                    avformat_close_input(&fmtCtx);
+                    QMetaObject::invokeMethod(qApp, [=]() {
+                        if (!dialogPtr) return;
+                        data->isFetching = false;
+                        data->timer->stop();
+                        data->timer->deleteLater();
+                        textBrowser->setHtml(buildHtml(data));
+                    });
+                    return;
+                }
+
+                AVCodecParameters *codecParams = videoStream->codecpar;
+                AVCodec *codec = avcodec_find_decoder(codecParams->codec_id);
+                if (!codec) {
+                    avformat_close_input(&fmtCtx);
+                    QMetaObject::invokeMethod(qApp, [=]() {
+                        if (!dialogPtr) return;
+                        data->isFetching = false;
+                        data->timer->stop();
+                        data->timer->deleteLater();
+                        textBrowser->setHtml(buildHtml(data));
+                    });
+                    return;
+                }
+
+                AVCodecContext *codecCtx = avcodec_alloc_context3(codec);
+                if (!codecCtx) {
+                    avformat_close_input(&fmtCtx);
+                    QMetaObject::invokeMethod(qApp, [=]() {
+                        if (!dialogPtr) return;
+                        data->isFetching = false;
+                        data->timer->stop();
+                        data->timer->deleteLater();
+                        textBrowser->setHtml(buildHtml(data));
+                    });
+                    return;
+                }
+
+                avcodec_parameters_to_context(codecCtx, codecParams);
+                if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
+                    avcodec_free_context(&codecCtx);
+                    avformat_close_input(&fmtCtx);
+                    QMetaObject::invokeMethod(qApp, [=]() {
+                        if (!dialogPtr) return;
+                        data->isFetching = false;
+                        data->timer->stop();
+                        data->timer->deleteLater();
+                        textBrowser->setHtml(buildHtml(data));
+                    });
+                    return;
+                }
+
+                AVPacket *pkt = av_packet_alloc();
+                AVFrame *frame = av_frame_alloc();
+                int i=0;
+                QList<double> iFrameTimes;
+
+                while (!data->isStop && av_read_frame(fmtCtx, pkt) >= 0 && (i<2000 || data->iCount <3)) {
+                    i++;
+                    if (pkt->stream_index == videoStream->index) {
+                        avcodec_send_packet(codecCtx, pkt);
+                        while (avcodec_receive_frame(codecCtx, frame) == 0) {
+                            switch (frame->pict_type) {
+                            case AV_PICTURE_TYPE_I: data->iCount++; break;
+                            case AV_PICTURE_TYPE_P: data->pCount++; break;
+                            case AV_PICTURE_TYPE_B: data->bCount++; break;
+                            default: break;
+                            }
+                            if (frame->pict_type == AV_PICTURE_TYPE_I) {
+                                int64_t ts = frame->best_effort_timestamp;
+                                if (ts == AV_NOPTS_VALUE) ts = frame->pts;
+                                if (ts != AV_NOPTS_VALUE) {
+                                    double time_sec = ts * av_q2d(videoStream->time_base);
+                                    iFrameTimes.append(time_sec);
+                                }
+                            }
+                            av_frame_unref(frame);
+                        }
+                    }
+                    av_packet_unref(pkt);
+                }
+
+                // 刷新解码器
+                avcodec_send_packet(codecCtx, nullptr);
+                while (avcodec_receive_frame(codecCtx, frame) == 0) {
+                    av_frame_unref(frame);
+                }
+
+                // 计算间隔
+                double avgGop = 0.0, maxGop = 0.0;
+                if (iFrameTimes.size() > 1) {
+                    double sumGap = 0.0;
+                    maxGop = 0.0;
+                    for (int i = 1; i < iFrameTimes.size(); ++i) {
+                        double gap = iFrameTimes[i] - iFrameTimes[i-1];
+                        sumGap += gap;
+                        if (gap > maxGop) maxGop = gap;
+                    }
+                    avgGop = sumGap / (iFrameTimes.size() - 1);
+                }
+
+                av_packet_free(&pkt);
+                av_frame_free(&frame);
+                avcodec_free_context(&codecCtx);
+                avformat_close_input(&fmtCtx);
+
+                // 回到主线程更新UI
+                QMetaObject::invokeMethod(qApp, [=]() {
+                    if (!dialogPtr) return; // 对话框已关闭，不再更新
+                    // 更新数据
+//                    data->iCount = iCount;
+//                    data->pCount = pCount;
+//                    data->bCount = bCount;
+                    data->avgGop = avgGop;
+                    data->maxGop = maxGop;
+                    data->hasFrameInfo = true;
+                    data->isFetching = false;
+
+                    // 停止并删除定时器
+                    data->timer->stop();
+                    data->timer->deleteLater();
+
+                    // 更新显示
+                    textBrowser->setHtml(buildHtml(data));
+                });
+            });
+        });
+    QObject::connect(infoDialog, &QDialog::finished, infoDialog, [data]() {
+        data->isStop = true;                // 通知后台线程退出循环
+        if (data->timer) {
+            data->timer->stop();             // 停止定时器，不再触发更新
+            // 定时器是对话框的子对象，会随对话框自动销毁，无需手动 delete
+        }
     });
+    // 复制按钮：使用最新的纯文本
+    QObject::connect(copyButton, &QPushButton::clicked, infoDialog,
+        [data, buildPlainText, infoDialog]() {
+            QString plain = buildPlainText(data);
+            QApplication::clipboard()->setText(plain);
+            QMessageBox msgBox(infoDialog);
+            msgBox.setWindowTitle("提示");
+            msgBox.setText("媒体文件信息已复制到剪贴板");
+            msgBox.setIcon(QMessageBox::Information);
+            msgBox.setStyleSheet(R"(
+                QMessageBox {
+                    background-color: #1a1a1a;
+                    color: white;
+                    font-family: 'Microsoft YaHei', sans-serif;
+                }
+                QMessageBox QLabel {
+                    color: white;
+                    font-size: 16px;
+                    padding: 15px 0;
+                    min-height: 40px;
+                    min-width: 260px;
+                    qproperty-alignment: 'AlignCenter';
+                }
+                QMessageBox QPushButton {
+                    min-height:25;
+                    background-color: #2a2a2a;
+                    color: white;
+                    border: 1px solid #3a3a3a;
+                    border-radius: 4px;
+                    padding: 6px 12px;
+                    min-width: 70px;
+                    font-size: 12px;
+                    font-family: 'Microsoft YaHei', sans-serif;
+                }
+                QMessageBox QPushButton:hover {
+                    background-color: #3a3a3a;
+                }
+                QMessageBox QPushButton:pressed {
+                    background-color: #4CAF50;
+                }
+            )");
+            msgBox.exec();
+        });
 
-    connect(closeButton, &QPushButton::clicked, infoDialog, &QDialog::close);
+    QObject::connect(closeButton, &QPushButton::clicked, infoDialog, &QDialog::close);
 
     // 布局
     QVBoxLayout *mainLayout = new QVBoxLayout(infoDialog);
-    mainLayout->setContentsMargins(0, 0, 0, 0);  // 去除布局的边距
-    mainLayout->setSpacing(0);  // 去除布局的间距
-
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
     mainLayout->addWidget(textBrowser);
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->addStretch();
     buttonLayout->addWidget(copyButton);
-    buttonLayout->addSpacing(10);  // 设置按钮间距为10像素
+    buttonLayout->addSpacing(10);
     buttonLayout->addWidget(closeButton);
     buttonLayout->addSpacing(20);
-    buttonLayout->setContentsMargins(10, 10, 10, 10);  // 为按钮区域添加内边距
-
+    buttonLayout->setContentsMargins(10, 10, 10, 10);
     mainLayout->addLayout(buttonLayout);
 
     infoDialog->show();

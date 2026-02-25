@@ -934,7 +934,6 @@ void Playlist::on_btnMoveUp_clicked()
         {
             // 临时阻塞信号，避免触发多次事件
             ui->List->blockSignals(true);
-
             QListWidgetItem* currentItem = ui->List->takeItem(currentRow);
             ui->List->insertItem(currentRow - 1, currentItem);
             ui->List->setCurrentRow(currentRow - 1);
@@ -947,6 +946,7 @@ void Playlist::on_btnMoveUp_clicked()
             }
             qDebug() << "调整后 GlobalVars::currentPlayIndex()：" << GlobalVars::currentPlayIndex();
             updateButtonStates();
+            ui->List->blockSignals(false);
         }
 }
 

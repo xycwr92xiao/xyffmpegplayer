@@ -1471,7 +1471,6 @@ int VideoCtl::stream_component_open(VideoState *is, int stream_index)
         // 分析关键帧分布
                 m_KeyFrameInfo = analyzeKeyFrameDistribution(ic, stream_index);
                 m_bKeyFrameSparse = m_KeyFrameInfo.isKeyFrameSparse;
-                qDebug() << "视频关键帧稀少，启用优化解码设置m_bKeyFrameSparse =  " << m_bKeyFrameSparse;
                 GlobalHelper::isKeyFrameSparse() = m_bKeyFrameSparse;
         //创建视频解码线程，开始视频解码
         decoder_init(&is->viddec, avctx, &is->videoq, is->continue_read_thread);
@@ -3098,14 +3097,13 @@ KeyFrameAnalysis VideoCtl::analyzeKeyFrameDistribution(AVFormatContext* fmt_ctx,
     int64_t last_keyframe_pts = -1;
     std::vector<double> intervals;
     int keyframe_count = 0;
-
+    int i = 0;
     // 扫描前100个包分析关键帧分布
-    for (int i = 0; i < 100 && av_read_frame(fmt_ctx, &packet) >= 0; i++) {
+    for (i=0; (i < 100 || keyframe_count<3) && av_read_frame(fmt_ctx, &packet) >= 0; i++) {
         if (packet.stream_index == video_stream) {
             if (packet.flags & AV_PKT_FLAG_KEY) {
                 keyframe_count++;
                 double current_pts = packet.pts * av_q2d(stream->time_base);
-
                 if (last_keyframe_pts != -1) {
                     double interval = current_pts - last_keyframe_pts;
                     intervals.push_back(interval);
@@ -3141,7 +3139,8 @@ KeyFrameAnalysis VideoCtl::analyzeKeyFrameDistribution(AVFormatContext* fmt_ctx,
                                    (analysis.maxKeyFrameInterval > 5.0) ||
                                    (keyframe_count < 2); // 至少需要2个关键帧
 
-        qDebug() << "关键帧分析 - 平均间隔:" << analysis.avgKeyFrameInterval
+        qDebug() << "扫描包数:" << i
+                 << "关键帧分析 - 平均间隔:" << analysis.avgKeyFrameInterval
                  << "最大间隔:" << analysis.maxKeyFrameInterval
                  << "总数:" << keyframe_count
                  << "是否稀少:" << analysis.isKeyFrameSparse;
