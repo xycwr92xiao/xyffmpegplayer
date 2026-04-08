@@ -216,6 +216,10 @@ MainWid::MainWid(QMainWindow *parent) :
                   // 同时确保播放列表不获取焦点
                   m_stPlaylist.setFocusPolicy(Qt::NoFocus);
               });
+         m_pSeekTimer = new QTimer(this);
+         m_pSeekTimer->setInterval(100); // 设置间隔为100毫秒（即按住半秒后触发一次，之后每半秒触发一次）
+         // 2. 连接定时器信号到槽函数
+         connect(m_pSeekTimer, &QTimer::timeout, this, &MainWid::onSeekTimerTimeout);
 }
 
 MainWid::~MainWid()
@@ -325,6 +329,7 @@ bool MainWid::ConnectSignalSlots()
     connect(ui->CtrlBarWid, &CtrlBar::SigPlaySeek, VideoCtl::GetInstance(), &VideoCtl::OnPlaySeek);
     connect(ui->CtrlBarWid, &CtrlBar::SigPlayVolume, VideoCtl::GetInstance(), &VideoCtl::OnPlayVolume);
     connect(ui->CtrlBarWid, &CtrlBar::SigPlayOrPause, VideoCtl::GetInstance(), &VideoCtl::OnPause);
+    connect(ui->CtrlBarWid, &CtrlBar::sigInfoMessage, ui->ShowWid, &Show::showInfo);
 //    connect(ui->CtrlBarWid, &CtrlBar::SigStop, VideoCtl::GetInstance(), &VideoCtl::OnStop);
 
     connect(ui->CtrlBarWid, &CtrlBar::SigFullScreenBtn, this, &MainWid::OnFullScreenPlay);
@@ -421,16 +426,24 @@ void MainWid::processCommandLineFile()
     GlobalHelper::haveCommandLine()=true;
     emit SigAppendItemTotop(m_commandLineFiles,0);
 }
-
+void MainWid::onSeekTimerTimeout() {
+    // 根据 m_nSeekStep 的值决定是快进还是快退
+    if (m_nSeekStep > 0) {
+        emit SigSeekForward();  // 发射快进信号 (对应原来的右键逻辑)
+        // 可选：显示提示信息
+        ui->ShowWid->showInfo("快进中...");
+    } else if (m_nSeekStep < 0) {
+        emit SigSeekBack();     // 发射快退信号 (对应原来的左键逻辑)
+        // 可选：显示提示信息
+        ui->ShowWid->showInfo("快退中...");
+    }
+    // 注意：这里不需要手动停止定时器，它会自动每隔500ms触发一次
+    // 只有当用户松开按键时，才会在 keyReleaseEvent 中停止定时器
+    m_pSeekTimer->stop(); // 停止定时器，快进/快退动作立即停止
+}
 
 void MainWid::keyReleaseEvent(QKeyEvent *event)
 {
-    // 	    // 是否按下Ctrl键      特殊按键
-    //     if(event->modifiers() == Qt::ControlModifier){
-    //         // 是否按下M键    普通按键  类似
-    //         if(event->key() == Qt::Key_M)
-    //             ···
-    //     }
     if (m_bFullScreenPlay) {
         if (!(event->key() == Qt::Key_Left || event->key() == Qt::Key_Right || event->key() == Qt::Key_Up || event->key() == Qt::Key_Down))
             UpdateMouseActivity();
@@ -439,6 +452,27 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
         m_bFrameStepMode = false;
         emit SigToggleFrameStepMode(false);
     }
+    if (m_nSeekStep == 0 && event->isAutoRepeat()) {
+            // 如果是连发，启动定时器
+        if (event->key() == Qt::Key_Right) {
+                    // 按下右方向键：启动定时器，设置步进为 +10秒
+            if (!m_pSeekTimer->isActive()) {
+                    m_nSeekStep = 10;
+                    m_pSeekTimer->start(); // 启动定时器
+            }
+                    event->accept();
+                    return;
+                } else if (event->key() == Qt::Key_Left) {
+                    // 按下左方向键：启动定时器，设置步进为 -10秒
+            if (!m_pSeekTimer->isActive()) {
+                    m_nSeekStep = -10;
+                    m_pSeekTimer->start(); // 启动定时器
+            }
+                    event->accept();
+                    return;
+                }
+        }
+
     qDebug() << "MainWid::keyPressEvent:" << event->key();
     switch (event->key())
     {
@@ -473,7 +507,7 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
         emit SigSeekBack10s();
         break;
     case Qt::Key_Right://前进5s
-        qDebug() << "前进5s";
+        qDebug() << "前进5s==================================";
         emit SigSeekForward();
         break;
     case Qt::Key_Up://增加10音量
@@ -491,6 +525,7 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
     default:
         break;
     }
+    QMainWindow::keyReleaseEvent(event);
 }
 
 
@@ -1184,6 +1219,7 @@ void MainWid::OnFullScreenPlay()
                 m_bMouseCursorHidden = false;
                 m_lastMousePos = QPoint(-1, -1); // 重置最后鼠标位置
                 m_stFullscreenMouseDetectTimer.start();
+              ui->ShowWid->showInfo("全屏:开",10,10);
     }
     else
     {
@@ -1327,6 +1363,7 @@ void MainWid::OnFullScreenPlay()
         GlobalVars::getWinState() = 0;
         m_bFullScreenPlay = false;
         m_bIsFullScreen = false;
+        ui->ShowWid->showInfo("全屏:OFF",10,10);
     }
     if (ui->ShowWid) {
         ui->ShowWid->updateSubtitleWindowPosition();
@@ -1454,6 +1491,7 @@ void MainWid::onShowSubtitle()
             subtitleWindow->setSubtitleText("");
 
         }
+          ui->ShowWid->showInfo(m_bShowSubtitle?"字幕：开":"字幕：关");
     }
 }
 void MainWid::setExtend()
@@ -1461,6 +1499,7 @@ void MainWid::setExtend()
     int extend=GlobalVars::getExtend();
     GlobalVars::getExtend()=extend==0?1:0;
     ui->ShowWid->ChangeShow();
+    ui->ShowWid->showInfo(GlobalVars::getExtend()?"拉伸：开":"拉伸：关");
 }
 void MainWid::InitMenu()
 {
@@ -1865,41 +1904,47 @@ void MainWid::OnMinBtnClicked()
     GlobalVars::getWinState() = 2;//最小化
     this->showMinimized();
 }
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
 void MainWid::OnAlwaysOnTopBtnClicked()
 {
     qDebug() << "置顶操作开始－－－－－－－－－－－－－－－－－－－－111";
     //ShowAllFontAwesomeIcons();
     m_bAlwaysOnTop = !m_bAlwaysOnTop;
-
+#ifdef Q_OS_WIN
+    QWindow *window = windowHandle();
+    if (!window) return;
+    HWND hwnd = reinterpret_cast<HWND>(window->winId());
+    // 设置窗口为最顶层（TOPMOST）或取消最顶层
+    SetWindowPos(hwnd, m_bAlwaysOnTop ? HWND_TOPMOST : HWND_NOTOPMOST,
+                 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    // 更新按钮图标和工具提示
+    GlobalHelper::SetIcon(ui->TitleWid->findChild<QPushButton*>("AlwaysOnTopBtn"), 9, m_bAlwaysOnTop?QChar(0xf08d):QChar(0xf2e3));
+    if (ui->TitleWid->findChild<QPushButton*>("AlwaysOnTopBtn")) {
+        ui->TitleWid->findChild<QPushButton*>("AlwaysOnTopBtn")->setToolTip(m_bAlwaysOnTop?"取消置顶":"窗口置顶");
+    }
+    ui->ShowWid->showInfo(m_bAlwaysOnTop ? "窗口置顶：ON" : "窗口置顶：OFF");
+    return;
+#endif
         // 更新窗口标志
         Qt::WindowFlags flags = windowFlags();
-
         if (m_bAlwaysOnTop) {
             // 设置窗口置顶
             flags |= Qt::WindowStaysOnTopHint;
             setWindowFlags(flags);
-            show(); // 必须重新显示窗口才能使标志生效
-
-            // 更新按钮图标和工具提示
-            GlobalHelper::SetIcon(ui->TitleWid->findChild<QPushButton*>("AlwaysOnTopBtn"), 9, QChar(0xf08d));
-            if (ui->TitleWid->findChild<QPushButton*>("AlwaysOnTopBtn")) {
-                ui->TitleWid->findChild<QPushButton*>("AlwaysOnTopBtn")->setToolTip("取消置顶");
-            }
-
         } else {
             // 取消窗口置顶
             flags &= ~Qt::WindowStaysOnTopHint;
             setWindowFlags(flags);
-            show(); // 必须重新显示窗口才能使标志生效
-
-            // 更新按钮图标和工具提示
-            GlobalHelper::SetIcon(ui->TitleWid->findChild<QPushButton*>("AlwaysOnTopBtn"), 9, QChar(0xf2e3));//06c
-            if (ui->TitleWid->findChild<QPushButton*>("AlwaysOnTopBtn")) {
-                ui->TitleWid->findChild<QPushButton*>("AlwaysOnTopBtn")->setToolTip("窗口置顶");
-            }
-
-
         }
+        show(); // 必须重新显示窗口才能使标志生效
+        // 更新按钮图标和工具提示
+        GlobalHelper::SetIcon(ui->TitleWid->findChild<QPushButton*>("AlwaysOnTopBtn"), 9, m_bAlwaysOnTop?QChar(0xf08d):QChar(0xf2e3));
+        if (ui->TitleWid->findChild<QPushButton*>("AlwaysOnTopBtn")) {
+            ui->TitleWid->findChild<QPushButton*>("AlwaysOnTopBtn")->setToolTip(m_bAlwaysOnTop?"取消置顶":"窗口置顶");
+        }
+        ui->ShowWid->showInfo(m_bAlwaysOnTop ? "窗口置顶：ON" : "窗口置顶：OFF");
 }
 void MainWid::OnMaxBtnClicked()
 {
@@ -1908,7 +1953,14 @@ void MainWid::OnMaxBtnClicked()
         if (m_bFullScreenPlay){
             OnFullScreenPlay();
         }else {
+            qDebug() << "最大化：" << isMaximized();
             showNormal();
+            ui->CtrlBarWid->setFixedWidth(QWIDGETSIZE_MAX);//清除控制栏固定宽度，让布局自动调整
+            if (m_mainWinWidth !=0){
+            QList<int> sizes;
+            sizes << m_mainWinWidth*0.65 << m_mainWinWidth*0.35;
+            m_splitter->setSizes(sizes);
+            }
             GlobalVars::getWinState()=0;
             emit SigShowMax(false);
         }
@@ -1925,8 +1977,16 @@ void MainWid::OnMaxBtnClicked()
                         emit SigShowMax(true);
                     });
         }else {
+            m_mainWinWidth = this->width();
             showMaximized();
             GlobalVars::getWinState()=1;
+            QScreen *pStCurScreen = qApp->screens().at(qApp->desktop()->screenNumber(this));
+            QRect stScteen = pStCurScreen->geometry();
+            qDebug() << "最大化了，宽度：" << stScteen.width();
+                QList<int> sizes;
+                sizes << stScteen.width()*0.8 << stScteen.width()*0.2;
+                m_splitter->setSizes(sizes);
+                //m_splitter->widget(1)->show();
             emit SigShowMax(true);
         }
     }
@@ -2009,6 +2069,7 @@ void MainWid::OnShowOrHidePlaylist()
         updatePlaylistButtonIcon(false);
         m_bPlaylistVisible = false;
     }
+    ui->ShowWid->showInfo(m_bPlaylistVisible ? "播放列表：显示" :"播放列表：隐藏");
     this->update();
 }
 
@@ -2031,7 +2092,7 @@ void MainWid::showPlaylistNormal(bool show)
                 // 显示播放列表
                 //ui->PlaylistWid->show();
                 if (m_splitter) {
-                    m_splitter->widget(1)->show();
+
                     // 获取手柄宽度
                     int handleWidth = m_splitter->handleWidth();
 
@@ -2039,6 +2100,12 @@ void MainWid::showPlaylistNormal(bool show)
                     // 目标：视频区域 = 591，播放列表 = playlistWidth
                     int newWindowWidth = video_width + playlistWidth + handleWidth + windowBorder;
 
+                    // 强制分割器使用固定大小
+                    QList<int> sizes;
+                    sizes << video_width << playlistWidth;
+                    m_splitter->setSizes(sizes);
+                    m_splitter->widget(1)->show();
+                    this->setGeometry(this->x(),this->y(), newWindowWidth, this->height());
                     qDebug() << "计算新窗口宽度:" << newWindowWidth
                              << " = 视频" << video_width
                              << " + 播放列表" << playlistWidth
@@ -2047,12 +2114,9 @@ void MainWid::showPlaylistNormal(bool show)
 
                     // 方法1：先调整窗口大小，再设置分割器
                    // this->resize(newWindowWidth, this->height());
-                    this->setGeometry(this->x(),this->y(), newWindowWidth, this->height());
 
-                    // 强制分割器使用固定大小
-                    QList<int> sizes;
-                    sizes << video_width << playlistWidth;
-                    m_splitter->setSizes(sizes);
+
+
 
                 }
 
@@ -2079,6 +2143,7 @@ void MainWid::showPlaylistNormal(bool show)
                // int oldMinWidth = this->minimumWidth();
                 // 3. 计算新窗口宽度
                 int newWindowWidth = savedVideoWidth + windowBorder;
+                if (m_splitter)m_splitter->widget(1)->hide();
                this->setGeometry(this->x(),this->y(), newWindowWidth, this->height());
                 // 方法1：逐步调整
                 // 1. 先调整分割器
@@ -2613,11 +2678,13 @@ void MainWid::adjustWindowToVideoSize()
         }
     }
 
-//    // 将窗口移动到屏幕中央
-//    int x = screenGeometry.x() + (screenGeometry.width() - requiredWidth) / 2;
-//    int y = screenGeometry.y() + (screenGeometry.height() - requiredHeight) / 2;
-//    this->move(x, y);
-
+    // 将窗口移动到屏幕中央
+    if (this->y()+requiredHeight > screenGeometry.height() || this->x()+requiredWidth > screenGeometry.width()){
+        int x = this->x()+requiredWidth > screenGeometry.width() ? screenGeometry.x() + (screenGeometry.width() - requiredWidth) / 2 : this->x();
+        int y = this->y()+requiredHeight > screenGeometry.height() ? screenGeometry.y() + (screenGeometry.height() - requiredHeight) / 2 : this->y();
+        this->move(x, y);
+    }
+    ui->ShowWid->showInfo(QString("实际大小：%1*%2").arg(m_currentVideoWidth).arg(m_currentVideoHeight));
 //    qDebug() << "已调整窗口到实际大小";
 }
 

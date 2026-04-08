@@ -15,6 +15,10 @@ enum PlayMode {
 class GlobalVars
 {
 public:
+    static int& spectrumMode(){
+       static int spectrumMode = 0;
+        return spectrumMode;
+    }
     static QString& subtitleFontFamily(){
        static QString subtitleFontFamily = "Microsoft YaHei";
         return subtitleFontFamily;

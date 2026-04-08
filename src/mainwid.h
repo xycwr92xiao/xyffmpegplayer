@@ -63,7 +63,6 @@ protected:
 
     //按键事件
     void keyReleaseEvent(QKeyEvent *event) override;
-
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override ;
     void mouseMoveEvent(QMouseEvent *event) override;
@@ -129,6 +128,7 @@ private:
     void loadEqualizerSettings();
     // 添加视频尺寸相关变量
     int m_currentVideoWidth = 0;
+    int m_mainWinWidth = 0;
     int m_currentVideoHeight = 0;
     void adjustWindowToVideoSize();  // 调整窗口到视频实际大小
     bool isVideoPlaying() const;     // 检查是否正在播放视频
@@ -141,6 +141,7 @@ private slots:
     void onActualSize();  // 实际大小菜单项响应函数
     void onUpdateActualSizeMenuState();  // 更新菜单项状态
     void onSubtitleSettingsChanged(const QString& fontFamily, int fontSize);
+    void onSeekTimerTimeout(); // 新增：处理定时快进/快退
 signals:
     void SigStepFrameForward();   // 步进一帧信号
         void SigStepFrameBackward();  // 后退一帧信号
@@ -158,6 +159,8 @@ signals:
     void SigAppendItemTotop(QStringList filesList,int index);
     void SigFadeVolmeClose(int optionType);
 private:
+    QTimer* m_pSeekTimer; // 新增：用于处理长按快进/快退的定时器
+    int m_nSeekStep=0;      // 新增：记录当前是快进(正数)还是快退(负数)
     bool m_bFrameStepMode = false;       // 逐帧播放模式标志
     Ui::MainWid *ui;
     bool m_bPlaying; ///< 正在播放

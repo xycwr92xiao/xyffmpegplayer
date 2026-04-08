@@ -12,6 +12,7 @@
 #include <QPainter>
 #include <QDebug>
 #include <QMutex>
+#include <QGraphicsDropShadowEffect>
 #include "show.h"
 #include "ui_show.h"
 #include "globalvars.h"
@@ -148,6 +149,19 @@ Show::Show(QWidget *parent) :
             // 连接音频元数据信号
             connect(VideoCtl::GetInstance(), &VideoCtl::SigAudioMetadataReceived,this, &Show::OnAudioMetadataReceived);
             connect(VideoCtl::GetInstance(), &VideoCtl::SigAudioCoverReceived,this, &Show::OnAudioCoverReceived);
+            // 创建信息提示标签
+            m_pInfoWindow = new TransparentSubtitleWindow();
+            m_pInfoWindow->setTextColor(QColor(0,240,240));//QColor(27, 227, 154)
+            m_pInfoWindow->setKeepBackground(false);
+            m_pInfoWindow->setHoverBgColor(QColor(0,0,0,0));
+            m_pInfoWindow->setStrokeColor(QColor(20,20,20));//描边
+            m_pInfoWindow->setFontSize(12);
+            m_pInfoWindow->setFontFamily("Microsoft YaHei");
+            m_pInfoWindow->hide();
+            // 创建定时器（单次触发）
+            m_pInfoTimer = new QTimer(this);
+            m_pInfoTimer->setSingleShot(true);
+            connect(m_pInfoTimer, &QTimer::timeout, this, &Show::onInfoTimerTimeout);
 }
 
 Show::~Show()
@@ -166,6 +180,7 @@ Show::~Show()
     if (m_pAudioInfoWidget) {
         delete m_pAudioInfoWidget;
     }
+    if (m_pInfoTimer) delete m_pInfoTimer;
 }
 
 bool Show::Init()
@@ -181,6 +196,35 @@ bool Show::Init()
 
 
 	return true;
+}
+void Show::showInfo(const QString& text,int x,int y)
+{
+    if (!m_pInfoWindow) return;
+    QFont font("Microsoft YaHei", 12, QFont::Bold);
+    QFontMetrics fm(font);
+    tipIofoWinWidth = fm.horizontalAdvance(text)+x;
+    // 设置文本并调整大小
+    QPoint globalPos = mapToGlobal(QPoint(0, 0));
+    m_pInfoWindow->setPosition(globalPos.x()+x, globalPos.y()+(m_bAudioMode ?240:GlobalVars::getFullScreen()?50:0)+y, tipIofoWinWidth, 30);
+    m_pInfoWindow->setSubtitleText(text);
+    m_pInfoWindow->show();
+    m_pInfoWindow->raise();              // 确保显示在最上层
+    // 启动定时器，3秒后开始淡出
+    m_pInfoTimer->start(3000);
+}
+
+void Show::onInfoTimerTimeout()
+{
+    // 开始淡出动画
+    m_pInfoWindow->hide();
+}
+void Show::updateInfoWindowPosition()
+{
+    if (!m_pInfoWindow) return;
+    // 获取当前窗口在屏幕上的位置
+    QPoint globalPos = mapToGlobal(QPoint(0, 0));
+    m_pInfoWindow->setPosition(globalPos.x()+10, globalPos.y()+ (m_bAudioMode ?250:10), tipIofoWinWidth, 30);
+
 }
 
 // 更新字幕窗口位置
@@ -345,40 +389,7 @@ void Show::resizeEvent(QResizeEvent *event)
 void Show::keyReleaseEvent(QKeyEvent *event)
 {
     qDebug() << "Show::keyPressEvent:" << event->key();
-    switch (event->key())
-    {
-    case Qt::Key_Escape:
-        if (GlobalVars::getFullScreen()){
-            emit SigPlayOrPause();
-            SigFullScreen();
-            emit MinBtnClicked();
-        }
-        break;
-    case Qt::Key_Enter:
-    case Qt::Key_Return://全屏
-        SigFullScreen();
-        break;
-    case Qt::Key_Left://后退5s
-        emit SigSeekBack();
-        break;
-    case Qt::Key_Right://前进5s
-        qDebug() << "前进5s";
-        emit SigSeekForward();
-        break;
-    case Qt::Key_Up://增加10音量
-        emit SigAddVolume();
-        break;
-    case Qt::Key_Down://减少10音量
-        emit SigSubVolume();
-        break;
-    case Qt::Key_Space://减少10音量
-        emit SigPlayOrPause();
-        break;
 
-    default:
-        QWidget::keyPressEvent(event);
-        break;
-    }
 }
 
 // void Show::contextMenuEvent(QContextMenuEvent* event)
@@ -453,7 +464,10 @@ void Show::mouseMoveEvent(QMouseEvent *event)
                 if (m_pSubtitleWindow && m_pSubtitleWindow->isVisible()) {
                     updateSubtitleWindowPosition();
                 }
-
+                // 拖动窗口时实时更新字幕位置
+                if (m_pInfoWindow && m_pInfoWindow->isVisible()) {
+                    updateInfoWindowPosition();
+                }
                 event->accept();
                 return;
             }
@@ -750,20 +764,27 @@ void Show::paintEvent(QPaintEvent *event)
                    //    spectrumY - 10, title);
 
         // 绘制频谱
+        int topMode = GlobalVars::spectrumMode()>0?1:0;
+        int BandsNum = m_spectrumBands;
+        if (GlobalVars::spectrumMode()==2)
+        {
+            margin =2;
+            BandsNum = spectrumWidth / (margin+10);
+        }
         if (m_spectrumBands > 0) {
             int barSpacing = 4;
-            int barWidth = (spectrumWidth - (m_spectrumBands -1) * barSpacing - margin*2) / m_spectrumBands;
-            margin=(spectrumWidth-barSpacing*(m_spectrumBands-1)-barWidth*m_spectrumBands)/2;
+            int barWidth = (spectrumWidth - (BandsNum -1) * barSpacing - margin*2) / BandsNum;
+            margin=(spectrumWidth-barSpacing*(BandsNum-1)-barWidth*BandsNum)/2;
 
-            for (int i = 0; i < m_spectrumBands; i++) {
-                float value = m_spectrumData[i];
-                int barHeight = value * spectrumHeight;
+            for (int i = 0; i < BandsNum; i++) {
+                float value = m_spectrumData[i % m_spectrumBands ];
+                int barHeight = (value * spectrumHeight)/(topMode/2+1);
                 int x = margin + i * (barWidth + barSpacing) + barSpacing;
-                int y = spectrumY + spectrumHeight - barHeight;
+                int y = spectrumY + (spectrumHeight - barHeight)/(topMode+1);
 
                 // 根据频率位置使用不同颜色
                 QColor color;
-                float pos = (float)i / m_spectrumBands;
+                float pos = (float)(i % m_spectrumBands) / m_spectrumBands;
 
                 if (pos < 0.33f) {
                     // 低频：红色到橙色
@@ -784,7 +805,14 @@ void Show::paintEvent(QPaintEvent *event)
 
                 painter.setBrush(color);
                 painter.setPen(Qt::NoPen);
-                painter.drawRect(x, y, barWidth, barHeight);
+                if (topMode==0){
+                //painter.drawRect(x, y, barWidth, barHeight);
+                painter.drawRoundedRect(x, y, barWidth, barHeight, barWidth/2, barWidth/2);
+                painter.setBrush(QColor(0, 0, 0));
+                painter.drawRect(4, spectrumY+ spectrumHeight-barWidth/2, spectrumWidth-1, barWidth/2);
+                }
+                else if (topMode==1)
+                    painter.drawRoundedRect(x, y, barWidth, barHeight, barWidth/2, barWidth/2);
             }
         }
     }

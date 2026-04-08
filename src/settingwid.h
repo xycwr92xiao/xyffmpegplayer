@@ -48,6 +48,9 @@ private slots:
     void onHoverBgColorClicked();
     void onLeaveBgColorClicked();
     void onKeepBackgroundChanged(int state);
+    void onSpectrumModeChanged1();
+    void onSpectrumModeChanged2();
+    void onSpectrumModeChanged3();
     //按钮
     void onApplyClicked();
     void onCancelClicked();
@@ -67,6 +70,7 @@ private:
     // 当前设置
     QString m_currentFontFamily;
     int m_currentFontSize;
+    int m_spectrumMode;
     // 颜色设置
         QColor m_currentTextColor;
         QColor m_currentStrokeColor;
@@ -77,7 +81,7 @@ private:
     // 临时设置（用于取消时恢复）
     QString m_tempFontFamily;
     int m_tempFontSize;
-
+    int m_tempspectrumMode = 0;
     // 临时颜色设置
         QColor m_tempTextColor;
         QColor m_tempStrokeColor;

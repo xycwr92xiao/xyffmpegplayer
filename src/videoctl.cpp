@@ -199,10 +199,12 @@ void VideoCtl::video_image_display(VideoState *is)
         vp->flip_v = vp->frame->linesize[0] < 0;
 
         //通知宽高变化
+
         if (m_nFrameW != vp->frame->width || m_nFrameH != vp->frame->height)
         {
             m_nFrameW = vp->frame->width;
             m_nFrameH = vp->frame->height;
+            qDebug() << "m_nFrameW = " << m_nFrameW << "vp->frame->width = " << vp->frame->width << "m_nFrameH = " << m_nFrameH << " vp->frame->height = " << vp->frame->height;
             emit SigFrameDimensionsChanged(m_nFrameW, m_nFrameH);
         }
     }
@@ -443,20 +445,15 @@ void VideoCtl::check_external_clock_speed(VideoState *is) {
 /* seek in the stream */
 void VideoCtl::stream_seek(VideoState *is, int64_t pos, int64_t rel)
 {
-    if (!is->seek_req) {
         is->seek_pos = pos;
         is->seek_rel = rel;
-        //is->seek_flags &= ~AVSEEK_FLAG_BYTE;
-//        if (m_bKeyFrameSparse) is->seek_flags = AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_ANY;
-//        else
-            is->seek_flags = AVSEEK_FLAG_BACKWARD;
+        is->seek_flags = AVSEEK_FLAG_BACKWARD;
         is->seek_req = 1;
         if (!m_FrameSeek){
             is->force_refresh = 1;
             is->frame_drops_late = 0; // 重置丢帧计数
         }
         SDL_CondSignal(is->continue_read_thread);
-    }
 }
 
 /* pause or resume the video */
@@ -711,7 +708,13 @@ display:
     }
     is->force_refresh = 0;
     //向ctrbar发送信号更新时间与进度条
-    emit SigVideoPlaySeconds(get_master_clock(is)*pf_playback_rate);
+    // 计算当前时间
+    double master_clock_val = get_master_clock(is);
+    double playback_time = master_clock_val * pf_playback_rate;
+    // 关键修复：检查是否为无效数值
+    if (!std::isnan(master_clock_val) && playback_time >= 0) {
+        emit SigVideoPlaySeconds((int)playback_time);
+    }
 }
 
 int VideoCtl::queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial)
@@ -1466,6 +1469,8 @@ int VideoCtl::stream_component_open(VideoState *is, int stream_index)
             }
         break;
     case AVMEDIA_TYPE_VIDEO:
+        m_nFrameW = 0;
+        m_nFrameH = 0;
         is->video_stream = stream_index;
         is->video_st = ic->streams[stream_index];
         // 分析关键帧分布
@@ -2290,6 +2295,7 @@ void VideoCtl::OnPause()
     }
     SetFrameStepMode(false);
     qDebug() << "目前的播放状态-------------->：" << GlobalVars::runState();
+
     if (GlobalVars::runState() == 1){
         runFadeProc(0);
     }else {
@@ -2301,6 +2307,8 @@ void VideoCtl::OnPause()
 
 void VideoCtl::OnStop()
 {
+    m_nFrameW = 0;
+    m_nFrameH = 0;
     m_bPlayLoop = false;
 }
 

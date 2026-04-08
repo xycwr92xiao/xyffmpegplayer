@@ -366,7 +366,8 @@ bool Playlist::InitUi()
      GlobalVars::playMode()=savedMode;
      emit SigPlayModeRestored(savedMode);
      // 恢复播放索引
-         int lastIndex = GlobalHelper::GetPlayIndex();
+         //int lastIndex = GlobalHelper::GetPlayIndex();
+         int lastIndex = GlobalVars::currentPlayIndex();
          if (lastIndex >= 0 && lastIndex < ui->List->count())
          {
              ui->List->setCurrentRow(lastIndex);

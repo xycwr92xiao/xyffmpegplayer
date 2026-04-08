@@ -359,18 +359,33 @@ QCheckBox::indicator {
       <bool>true</bool>
      </property>
      <property name="title">
-      <string>其他设置</string>
+      <string>频谱设置</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
-      <item row="0" column="0">
-       <widget class="QLabel" name="labelNote">
-        <property name="text">
-         <string>更多设置将在后续版本中添加...</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
+      <item row="1" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <widget class="QRadioButton" name="sepMode1">
+          <property name="text">
+           <string>上端跳动</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="sepMode2">
+          <property name="text">
+           <string>上下跳动</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="sepMode3">
+          <property name="text">
+           <string>固定宽度</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>

@@ -20,6 +20,7 @@ int main(int argc, char *argv[])
         settings.beginGroup("Subtitle");
         GlobalVars::subtitleFontFamily() = settings.value("FontFamily", "Microsoft YaHei").toString();
         GlobalVars::subtitleFontSize() = settings.value("FontSize", 16).toInt();
+        GlobalVars::spectrumMode()=settings.value("spectrumMode", 0).toInt();
         GlobalVars::subtitleTextColor() = QColor(settings.value("TextColor", "#FFFFFFFF").toString());
         GlobalVars::subtitleStrokeColor() = QColor(settings.value("StrokeColor", "#FF000000").toString());
         GlobalVars::subtitleHoverBgColor() = QColor(settings.value("HoverBgColor", "#96000000").toString());

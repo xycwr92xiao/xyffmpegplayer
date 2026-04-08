@@ -32,6 +32,7 @@ SettingWid::SettingWid(QWidget *parent)
     // 设置临时值
     m_tempFontFamily = m_currentFontFamily;
     m_tempFontSize = m_currentFontSize;
+    m_tempspectrumMode = m_spectrumMode;
     // 设置临时值
     m_tempFontFamily = m_currentFontFamily;
     m_tempFontSize = m_currentFontSize;
@@ -71,6 +72,10 @@ void SettingWid::initUI()
 
         // 设置复选框
         ui.checkKeepBackground->setChecked(m_currentKeepBackground);
+        m_spectrumMode = GlobalVars::spectrumMode();
+        ui.sepMode1->setChecked(m_spectrumMode==0);
+        ui.sepMode2->setChecked(m_spectrumMode==1);
+        ui.sepMode3->setChecked(m_spectrumMode==2);
         ui.btnLeaveBgColor->setEnabled(m_currentKeepBackground);
         ui.labelLeaveBgColorDisplay->setEnabled(m_currentKeepBackground);
     // 连接信号槽
@@ -140,6 +145,12 @@ void SettingWid::setupConnections()
         // 复选框变化
         connect(ui.checkKeepBackground, &QCheckBox::stateChanged,
                 this, &SettingWid::onKeepBackgroundChanged);
+        connect(ui.sepMode1, &QRadioButton::clicked,
+                this, &SettingWid::onSpectrumModeChanged1);
+        connect(ui.sepMode2, &QRadioButton::clicked,
+                this, &SettingWid::onSpectrumModeChanged2);
+        connect(ui.sepMode3, &QRadioButton::clicked,
+                this, &SettingWid::onSpectrumModeChanged3);
     // 按钮点击
     connect(ui.btnApply, &QPushButton::clicked,
             this, &SettingWid::onApplyClicked);
@@ -155,6 +166,7 @@ void SettingWid::saveSettings()
     m_settings.beginGroup("Subtitle");
     m_settings.setValue("FontFamily", m_currentFontFamily);
     m_settings.setValue("FontSize", m_currentFontSize);
+    m_settings.setValue("spectrumMode", m_spectrumMode);
     m_settings.setValue("TextColor", m_currentTextColor.name(QColor::HexArgb));
     m_settings.setValue("StrokeColor", m_currentStrokeColor.name(QColor::HexArgb));
     m_settings.setValue("HoverBgColor", m_currentHoverBgColor.name(QColor::HexArgb));
@@ -171,6 +183,7 @@ void SettingWid::loadSettings()
     m_settings.beginGroup("Subtitle");
     m_currentFontFamily = m_settings.value("FontFamily", "Microsoft YaHei").toString();
     m_currentFontSize = m_settings.value("FontSize", 16).toInt();
+    m_spectrumMode= m_settings.value("spectrumMode", 0).toInt();
     m_currentTextColor = QColor(m_settings.value("TextColor", "#FFFFFFFF").toString());
         m_currentStrokeColor = QColor(m_settings.value("StrokeColor", "#FF000000").toString());
         m_currentHoverBgColor = QColor(m_settings.value("HoverBgColor", "#96000000").toString());
@@ -187,6 +200,7 @@ void SettingWid::loadSettings()
     }
 
     ui.spinFontSize->setValue(m_currentFontSize);
+
     // 更新颜色按钮和标签
         updateColorButton(ui.btnTextColor, m_currentTextColor);
         updateColorButton(ui.btnStrokeColor, m_currentStrokeColor);
@@ -431,7 +445,21 @@ void SettingWid::onKeepBackgroundChanged(int state)
     updatePreview();
     ui.btnApply->setEnabled(true);
 }
-
+void SettingWid::onSpectrumModeChanged1()
+{
+    m_tempspectrumMode = 0;
+    ui.btnApply->setEnabled(true);
+}
+void SettingWid::onSpectrumModeChanged2()
+{
+    m_tempspectrumMode = 1;
+    ui.btnApply->setEnabled(true);
+}
+void SettingWid::onSpectrumModeChanged3()
+{
+    m_tempspectrumMode = 2;
+    ui.btnApply->setEnabled(true);
+}
 void SettingWid::updatePreview()
 {
     // 获取当前选择的字体
@@ -487,12 +515,15 @@ void SettingWid::onApplyClicked()
     m_currentLeaveBgColor = m_tempLeaveBgColor;
     m_currentKeepBackground = m_tempKeepBackground;
 
+    m_spectrumMode = m_tempspectrumMode;
+    qDebug() << "m_tempspectrumMode = " << m_tempspectrumMode;
     // 保存到配置文件
     saveSettings();
 
     // 更新全局变量
     GlobalVars::subtitleFontFamily() = m_currentFontFamily;
     GlobalVars::subtitleFontSize() = m_currentFontSize;
+    GlobalVars::spectrumMode() = m_spectrumMode;
     GlobalVars::subtitleTextColor() = m_currentTextColor;
     qDebug() << "保存的颜色是：" << m_currentTextColor;
     GlobalVars::subtitleStrokeColor() = m_currentStrokeColor;
@@ -508,7 +539,7 @@ void SettingWid::onApplyClicked()
 
     ui.btnApply->setEnabled(false);
 
-    qDebug() << "设置已应用：" << m_currentFontFamily << m_currentFontSize;
+    qDebug() << "设置已应用：GlobalVars::spectrumMode()" << GlobalVars::spectrumMode() << "m_spectrumMode" << m_spectrumMode;
     qDebug() << "颜色设置已应用：" << m_currentTextColor << m_currentStrokeColor;
 }
 
