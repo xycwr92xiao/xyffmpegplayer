@@ -188,7 +188,13 @@ void CtrlBar::on_PlayOrPauseBtn_clicked()
                 return;
             }
         }
-    emit SigPlayOrPause();
+        else {
+//            qDebug() << "GlobalVars::runState()" << GlobalVars::runState();
+            if (GlobalVars::runState()==0){
+                emit SigPlaySelected(GlobalVars::selectedIndex());
+            }
+            else emit SigPlayOrPause();
+        }
 }
 
 void CtrlBar::OnPauseStat(bool bPaused)
@@ -293,7 +299,7 @@ void CtrlBar::on_seekByPercent(double nSeconds)
 // 添加新按钮的槽函数实现
 void CtrlBar::on_Backward5Btn_clicked()
 {
-    on_seekByPercent(GlobalHelper::isKeyFrameSparse() ? -10.0 : -5.0);
+    on_seekByPercent(GlobalHelper::isKeyFrameSparse() ? -11.0 : -5.0);
     emit sigInfoMessage(GlobalHelper::isKeyFrameSparse() ? "快退10秒" : "快退5秒");
 }
 // 添加新按钮的槽函数实现
@@ -303,23 +309,23 @@ void CtrlBar::on_Backward5Btn_rightClicked()
     if (GlobalVars::runState()==1)
     on_seekSecond(-10);
     else {if (GlobalVars::runState()==2)
-            on_seekByPercent(-10);}
-    emit sigInfoMessage("快退10秒");
+            on_seekByPercent(-15);}
+    emit sigInfoMessage("快退15秒");
 }
 
 void CtrlBar::on_Forward5Btn_rightClicked()
 {
     if (GlobalVars::runState()==1)
-    on_seekSecond(GlobalHelper::isKeyFrameSparse() ? 20 : 15);
+    on_seekSecond(GlobalHelper::isKeyFrameSparse() ? 20 : 10);
     else {if (GlobalVars::runState()==2)
             on_seekByPercent(10);}
-    emit sigInfoMessage(GlobalHelper::isKeyFrameSparse() ? "快进20秒" : "快进15秒");
+    emit sigInfoMessage(GlobalHelper::isKeyFrameSparse() ? "快进20秒" : "快进10秒");
 }
 void CtrlBar::on_Forward5Btn_clicked()
 {
     if (GlobalVars::runState()==1){
-     on_seekSecond(GlobalHelper::isKeyFrameSparse() ? 15 : 5);
-     emit sigInfoMessage(GlobalHelper::isKeyFrameSparse() ? "快进15秒" : "快进5秒F");
+     on_seekSecond(GlobalHelper::isKeyFrameSparse() ? 12 : 5);
+     emit sigInfoMessage(GlobalHelper::isKeyFrameSparse() ? "快进12秒" : "快进5秒");
     }
     else {if (GlobalVars::runState()==2)
         on_seekByPercent(5);}

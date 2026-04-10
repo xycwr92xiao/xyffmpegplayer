@@ -217,7 +217,7 @@ MainWid::MainWid(QMainWindow *parent) :
                   m_stPlaylist.setFocusPolicy(Qt::NoFocus);
               });
          m_pSeekTimer = new QTimer(this);
-         m_pSeekTimer->setInterval(100); // 设置间隔为100毫秒（即按住半秒后触发一次，之后每半秒触发一次）
+         m_pSeekTimer->setInterval(60); // 设置间隔为100毫秒（即按住半秒后触发一次，之后每半秒触发一次）
          // 2. 连接定时器信号到槽函数
          connect(m_pSeekTimer, &QTimer::timeout, this, &MainWid::onSeekTimerTimeout);
 }
