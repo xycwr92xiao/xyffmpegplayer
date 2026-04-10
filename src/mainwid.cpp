@@ -481,6 +481,9 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
             emit SigPlayOrPause();
             OnFullScreenPlay();
             OnMinBtnClicked();
+        }else {
+            emit SigPlayOrPause();
+            OnMinBtnClicked();
         }
         break;
     case Qt::Key_Enter:     // 小键盘回车
@@ -525,7 +528,7 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
     default:
         break;
     }
-    QMainWindow::keyReleaseEvent(event);
+    //QMainWindow::keyReleaseEvent(event);//有这句，恢复窗口后，视频窗口最小而主窗口没有恢复
 }
 
 
