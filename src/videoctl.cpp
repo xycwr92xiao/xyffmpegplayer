@@ -445,15 +445,20 @@ void VideoCtl::check_external_clock_speed(VideoState *is) {
 /* seek in the stream */
 void VideoCtl::stream_seek(VideoState *is, int64_t pos, int64_t rel)
 {
+    if (!is->seek_req) {
         is->seek_pos = pos;
         is->seek_rel = rel;
-        is->seek_flags = AVSEEK_FLAG_BACKWARD;
+        //is->seek_flags &= ~AVSEEK_FLAG_BYTE;
+//        if (m_bKeyFrameSparse) is->seek_flags = AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_ANY;
+//        else
+            is->seek_flags = AVSEEK_FLAG_BACKWARD;
         is->seek_req = 1;
         if (!m_FrameSeek){
             is->force_refresh = 1;
             is->frame_drops_late = 0; // 重置丢帧计数
         }
         SDL_CondSignal(is->continue_read_thread);
+    }
 }
 
 /* pause or resume the video */
@@ -707,14 +712,16 @@ display:
             video_display(is);
     }
     is->force_refresh = 0;
-    //向ctrbar发送信号更新时间与进度条
     // 计算当前时间
     double master_clock_val = get_master_clock(is);
     double playback_time = master_clock_val * pf_playback_rate;
+
     // 关键修复：检查是否为无效数值
     if (!std::isnan(master_clock_val) && playback_time >= 0) {
         emit SigVideoPlaySeconds((int)playback_time);
     }
+    //向ctrbar发送信号更新时间与进度条
+    //emit SigVideoPlaySeconds(get_master_clock(is)*pf_playback_rate);
 }
 
 int VideoCtl::queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial)
@@ -1474,9 +1481,9 @@ int VideoCtl::stream_component_open(VideoState *is, int stream_index)
         is->video_stream = stream_index;
         is->video_st = ic->streams[stream_index];
         // 分析关键帧分布
-                m_KeyFrameInfo = analyzeKeyFrameDistribution(ic, stream_index);
-                m_bKeyFrameSparse = m_KeyFrameInfo.isKeyFrameSparse;
-                GlobalHelper::isKeyFrameSparse() = m_bKeyFrameSparse;
+              //  m_KeyFrameInfo = analyzeKeyFrameDistribution(ic, stream_index);
+              //  m_bKeyFrameSparse = m_KeyFrameInfo.isKeyFrameSparse;
+               // GlobalHelper::isKeyFrameSparse() = m_bKeyFrameSparse;
         //创建视频解码线程，开始视频解码
         decoder_init(&is->viddec, avctx, &is->videoq, is->continue_read_thread);
         packet_queue_start(is->viddec.queue);
@@ -2091,7 +2098,50 @@ void VideoCtl::OnPlaySeek(double dPercent)
     {
         return;
     }
-    int64_t ts = dPercent * m_CurStream->ic->duration;
+    int64_t ts =0;
+    if (dPercent < 0){
+        double currentSec = get_master_clock(m_CurStream);
+        while (std::isnan(currentSec)) currentSec = get_master_clock(m_CurStream);
+       if (m_bIndexReady){
+         double nextKey = getPreKeyframe(currentSec);
+         if (nextKey > 0) {
+             double targetSec = nextKey;
+             emit sigInfoMessage(QString("快退：%1 秒(关键祯)").arg(QString::number((currentSec - targetSec), 'f', 1)) );
+             ts = (int64_t) (targetSec * AV_TIME_BASE);
+             if (m_CurStream->ic->start_time != AV_NOPTS_VALUE)ts += m_CurStream->ic->start_time;
+             stream_seek(m_CurStream, ts, 0);
+             return;
+         }
+       }
+    }
+    if (dPercent > 1){//快进5秒的逻辑
+         double currentSec = get_master_clock(m_CurStream);
+         while (std::isnan(currentSec)) currentSec = get_master_clock(m_CurStream);
+        if (m_bIndexReady){
+          double nextKey = getNextKeyframeAfter(currentSec);
+          if (nextKey > 0) {
+                      // 精确跳到下一个关键帧
+                      double targetSec = nextKey;
+                      // 如果用户希望快进5秒但下一个关键帧太近，仍然跳到下一个关键帧
+                      if (dPercent <20){
+                          if (targetSec - currentSec >= dPercent/2) {
+                              // 仍然跳到下一个关键帧
+                          } else {
+                              // 否则跳到 currentSec+step 的位置（标准逻辑）
+                              targetSec = currentSec + dPercent;
+                          }
+                      }
+                      emit sigInfoMessage(QString("快进：%1 秒(关键祯)").arg(QString::number((targetSec - currentSec), 'f', 1)) );
+                      // 执行 seek，使用 BACKWARD 标志，因为 targetSec 已经精确到关键帧时间
+                      ts = (int64_t) (targetSec * AV_TIME_BASE);
+                      if (m_CurStream->ic->start_time != AV_NOPTS_VALUE)ts += m_CurStream->ic->start_time;
+                      stream_seek(m_CurStream, ts, 0);
+                      return;
+                  }
+          double fallbackSec = currentSec + (GlobalHelper::isKeyFrameSparse() ? 11.0 : 5.0);
+          ts = (int64_t)(fallbackSec * AV_TIME_BASE);
+        }
+    }else ts = dPercent * m_CurStream->ic->duration;
     if (m_CurStream->ic->start_time != AV_NOPTS_VALUE)
         ts += m_CurStream->ic->start_time;
     stream_seek(m_CurStream, ts, 0);
@@ -2338,7 +2388,9 @@ VideoCtl::VideoCtl(QObject *parent) :
         // ... 现有初始化 ...
             m_eqEnabled(false),
             m_balance(0),
-            m_eqGains(10, 0.0f)
+            m_eqGains(10, 0.0f),
+            m_bIndexBuilding(false),
+                m_bIndexReady(false)
 {
     avdevice_register_all();
     //网络格式初始化
@@ -2413,6 +2465,8 @@ VideoCtl::~VideoCtl()
             SDL_DestroyTexture(m_pSpectrumTexture);
             m_pSpectrumTexture = nullptr;
         }
+        if (m_indexBuildThread.joinable())
+                m_indexBuildThread.join();
     avformat_network_deinit();
 
     SDL_Quit();
@@ -2437,7 +2491,15 @@ bool VideoCtl::StartPlay(QString strFileName, WId widPlayWid)
                 GlobalVars::isVideoPlaying()=true;
                 SetAudioOnlyMode(false);
             }
-
+            m_bIndexReady=false;
+            m_bIndexBuilding =false;
+            // 启动后台关键帧索引构建（仅视频文件且未构建过）
+                if (GlobalHelper::IsVideo(strFileName) && !m_bIndexReady && !m_bIndexBuilding) {
+                    m_strCurrentFile = strFileName;
+                    if (m_indexBuildThread.joinable())
+                        m_indexBuildThread.join();
+                    m_indexBuildThread = std::thread(&VideoCtl::buildKeyframeIndexThread, this);
+                }
             emit SigStartPlay(strFileName);
 
         play_wid = widPlayWid;
@@ -3094,65 +3156,112 @@ void VideoCtl::StepFrameBackward()
 
 
 // 更简单但更可靠的分析方法
-// videoctl.cpp 添加
-KeyFrameAnalysis VideoCtl::analyzeKeyFrameDistribution(AVFormatContext* fmt_ctx, int video_stream) {
-    KeyFrameAnalysis analysis = {true, 2.0, 5.0, 0};
 
-    if (!fmt_ctx || video_stream < 0) return analysis;
+void VideoCtl::buildKeyframeIndexForFile(const QString& fileName)
+{
+    if (m_bIndexBuilding || m_bIndexReady) return;
+    m_bIndexBuilding = true;
+    m_strCurrentFile = fileName;
+    m_keyframePTS.clear();
+
+    AVFormatContext* fmt_ctx = nullptr;
+    int ret = avformat_open_input(&fmt_ctx, fileName.toUtf8().constData(), nullptr, nullptr);
+    if (ret < 0) {
+        qDebug() << "无法打开文件构建索引:" << fileName;
+        m_bIndexBuilding = false;
+        return;
+    }
+
+    ret = avformat_find_stream_info(fmt_ctx, nullptr);
+    if (ret < 0) {
+        avformat_close_input(&fmt_ctx);
+        m_bIndexBuilding = false;
+        return;
+    }
+
+    // 查找视频流
+    int video_stream = av_find_best_stream(fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
+    if (video_stream < 0) {
+        avformat_close_input(&fmt_ctx);
+        m_bIndexBuilding = false;
+        return;
+    }
 
     AVStream* stream = fmt_ctx->streams[video_stream];
-    AVPacket packet;
+    AVPacket pkt;
+    av_init_packet(&pkt);
+    int i=0,keyframe_count=0;
+    double max_interval = 0,sum = 0;
+    double interval=0;
     int64_t last_keyframe_pts = -1;
-    std::vector<double> intervals;
-    int keyframe_count = 0;
-    int i = 0;
-    // 扫描前100个包分析关键帧分布
-    for (i=0; (i < 100 || keyframe_count<3) && av_read_frame(fmt_ctx, &packet) >= 0; i++) {
-        if (packet.stream_index == video_stream) {
-            if (packet.flags & AV_PKT_FLAG_KEY) {
-                keyframe_count++;
-                double current_pts = packet.pts * av_q2d(stream->time_base);
-                if (last_keyframe_pts != -1) {
-                    double interval = current_pts - last_keyframe_pts;
-                    intervals.push_back(interval);
-                }
-                last_keyframe_pts = current_pts;
+    KeyFrameAnalysis analysis = {true, 2.0, 5.0, 0};
+    // 遍历所有包，记录关键帧
+    while (av_read_frame(fmt_ctx, &pkt) >= 0) {
+        i++;
+        if (pkt.stream_index == video_stream && (pkt.flags & AV_PKT_FLAG_KEY)) {
+            double pts = pkt.pts * av_q2d(stream->time_base);
+            m_keyframePTS.append(pts);
+        if(analysis.totalKeyFrames==0){
+            if (last_keyframe_pts != -1) {
+                interval = pts - last_keyframe_pts;
             }
-        }
-        av_packet_unref(&packet);
-    }
-
-    // 重新定位到文件开始
-    av_seek_frame(fmt_ctx, -1, 0, AVSEEK_FLAG_BACKWARD);
-
-    // 分析结果
-    if (!intervals.empty()) {
-        double sum = 0;
-        double max_interval = 0;
-
-        for (double interval : intervals) {
+            last_keyframe_pts = pts;
             sum += interval;
             if (interval > max_interval) max_interval = interval;
+            keyframe_count++;
+            if ( i>100 && keyframe_count>=3){
+                analysis.avgKeyFrameInterval = sum / (m_keyframePTS.size()-1);
+                analysis.maxKeyFrameInterval = max_interval;
+                analysis.totalKeyFrames = keyframe_count;
+                analysis.isKeyFrameSparse = (analysis.avgKeyFrameInterval > 2.0) ||
+                                           (analysis.maxKeyFrameInterval > 5.0) ||
+                                           (keyframe_count < 2); // 至少需要2个关键帧
+                m_bKeyFrameSparse = analysis.isKeyFrameSparse;
+                GlobalHelper::isKeyFrameSparse() = m_bKeyFrameSparse;
+                qDebug() << "扫描包数:" << i
+                         << "关键帧分析 - 平均间隔:" << analysis.avgKeyFrameInterval
+                         << "最大间隔:" << analysis.maxKeyFrameInterval
+                         << "总数:" << keyframe_count
+                         << "是否稀少:" << analysis.isKeyFrameSparse;
+            }
+            }
         }
-
-        analysis.avgKeyFrameInterval = sum / intervals.size();
-        analysis.maxKeyFrameInterval = max_interval;
-        analysis.totalKeyFrames = keyframe_count;
-
-        // 判断是否关键帧稀少
-        // 条件1: 平均关键帧间隔 > 2秒
-        // 条件2: 最大关键帧间隔 > 5秒
-        // 条件3: 关键帧密度 < 0.2个/秒 (假设视频长度10秒)
-        analysis.isKeyFrameSparse = (analysis.avgKeyFrameInterval > 2.0) ||
-                                   (analysis.maxKeyFrameInterval > 5.0) ||
-                                   (keyframe_count < 2); // 至少需要2个关键帧
-
-        qDebug() << "扫描包数:" << i
-                 << "关键帧分析 - 平均间隔:" << analysis.avgKeyFrameInterval
-                 << "最大间隔:" << analysis.maxKeyFrameInterval
-                 << "总数:" << keyframe_count
-                 << "是否稀少:" << analysis.isKeyFrameSparse;
+        av_packet_unref(&pkt);
     }
 
-    return analysis;
+    // 排序（理论上已经有序，但为了安全）
+    std::sort(m_keyframePTS.begin(), m_keyframePTS.end());
+    m_bIndexReady = true;
+    m_bIndexBuilding = false;
+
+    qDebug() << "关键帧索引构建完成，共" << m_keyframePTS.size() << "个关键帧，文件:" << fileName;
+    avformat_close_input(&fmt_ctx);
+}
+
+void VideoCtl::buildKeyframeIndexThread()
+{
+    buildKeyframeIndexForFile(m_strCurrentFile);
+}
+double VideoCtl::getNextKeyframeAfter(double currentPts)
+{
+    if (!m_bIndexReady || m_keyframePTS.isEmpty())
+        return -1.0;
+
+    // 二分查找第一个大于 currentPts 的关键帧
+    auto it = std::upper_bound(m_keyframePTS.begin(), m_keyframePTS.end(), currentPts);
+    if (it != m_keyframePTS.end())
+        return *it;
+    return -1.0;  // 之后没有关键帧了
+}
+double VideoCtl::getPreKeyframe(double currentPts)
+{
+    if (!m_bIndexReady || m_keyframePTS.isEmpty())
+        return -1.0;
+
+    // 二分查找第一个大于 currentPts 的关键帧
+    auto it = std::upper_bound(m_keyframePTS.begin(), m_keyframePTS.end(), currentPts);
+    if (it >= m_keyframePTS.begin()+2) {
+            return *(it - 2);
+        }
+    return -1.0;  // 之后没有关键帧了
 }

@@ -187,9 +187,6 @@ MainWid::MainWid(QMainWindow *parent) :
             qDebug() << "MainWid构造函数完成";
             m_splitter->setChildrenCollapsible(true);
             ui->ShowWid->setMinimumWidth(0);
-            qDebug() << "窗口初始大小：" << this->size();
-            qDebug() << "窗口最小大小：" << minimumSize();
-            qDebug() << "窗口最大大小：" << maximumSize();
             // 创建自动隐藏定时器
             // 创建播放列表自动隐藏定时器
                 m_playlistHideTimer = new QTimer(this);
@@ -216,10 +213,10 @@ MainWid::MainWid(QMainWindow *parent) :
                   // 同时确保播放列表不获取焦点
                   m_stPlaylist.setFocusPolicy(Qt::NoFocus);
               });
-         m_pSeekTimer = new QTimer(this);
-         m_pSeekTimer->setInterval(60); // 设置间隔为100毫秒（即按住半秒后触发一次，之后每半秒触发一次）
-         // 2. 连接定时器信号到槽函数
-         connect(m_pSeekTimer, &QTimer::timeout, this, &MainWid::onSeekTimerTimeout);
+          m_pSeekTimer = new QTimer(this);
+          m_pSeekTimer->setInterval(60); // 设置间隔为100毫秒（即按住半秒后触发一次，之后每半秒触发一次）
+          // 2. 连接定时器信号到槽函数
+          connect(m_pSeekTimer, &QTimer::timeout, this, &MainWid::onSeekTimerTimeout);
 }
 
 MainWid::~MainWid()
@@ -366,7 +363,7 @@ bool MainWid::ConnectSignalSlots()
     connect(VideoCtl::GetInstance(), &VideoCtl::SigFrameDimensionsChanged, ui->ShowWid, &Show::OnFrameDimensionsChanged, Qt::QueuedConnection);
     connect(VideoCtl::GetInstance(), &VideoCtl::SigStopFinished, &m_stTitle, &Title::OnStopFinished, Qt::DirectConnection);
     connect(VideoCtl::GetInstance(), &VideoCtl::SigStartPlay, &m_stTitle, &Title::OnPlay, Qt::DirectConnection);
-
+    connect(VideoCtl::GetInstance(), &VideoCtl::sigInfoMessage, ui->ShowWid, &Show::showInfo);
     connect(&m_stSettingWid, &SettingWid::subtitleSettingsChanged,this, &MainWid::onSubtitleSettingsChanged);
     connect(&m_stSettingWid, &SettingWid::subtitleColorSettingsChanged,ui->ShowWid, &Show::OnSubtitleColorSettingsChanged);
     //connect(&m_stCtrlBarAnimationTimer, &QTimer::timeout, this, &MainWid::OnCtrlBarAnimationTimeOut);
@@ -426,17 +423,27 @@ void MainWid::processCommandLineFile()
     GlobalHelper::haveCommandLine()=true;
     emit SigAppendItemTotop(m_commandLineFiles,0);
 }
+
 void MainWid::onSeekTimerTimeout() {
     // 根据 m_nSeekStep 的值决定是快进还是快退
     if (m_nSeekStep > 0) {
+        if(m_nSeekStep==10){
         emit SigSeekForward();  // 发射快进信号 (对应原来的右键逻辑)
+            ui->ShowWid->showInfo("快进中1...");
+        }
+        else {SigSeekForward10s();
+        ui->ShowWid->showInfo("快进中2...");
+        }
         // 可选：显示提示信息
-        ui->ShowWid->showInfo("快进中...");
+
     } else if (m_nSeekStep < 0) {
+        if(m_nSeekStep==-10)
         emit SigSeekBack();     // 发射快退信号 (对应原来的左键逻辑)
+        else SigSeekBack10s();
         // 可选：显示提示信息
         ui->ShowWid->showInfo("快退中...");
     }
+    m_nSeekStep =0 ;
     // 注意：这里不需要手动停止定时器，它会自动每隔500ms触发一次
     // 只有当用户松开按键时，才会在 keyReleaseEvent 中停止定时器
     m_pSeekTimer->stop(); // 停止定时器，快进/快退动作立即停止
@@ -444,6 +451,12 @@ void MainWid::onSeekTimerTimeout() {
 
 void MainWid::keyReleaseEvent(QKeyEvent *event)
 {
+    // 	    // 是否按下Ctrl键      特殊按键
+    //     if(event->modifiers() == Qt::ControlModifier){
+    //         // 是否按下M键    普通按键  类似
+    //         if(event->key() == Qt::Key_M)
+    //             ···
+    //     }
     if (m_bFullScreenPlay) {
         if (!(event->key() == Qt::Key_Left || event->key() == Qt::Key_Right || event->key() == Qt::Key_Up || event->key() == Qt::Key_Down))
             UpdateMouseActivity();
@@ -452,12 +465,16 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
         m_bFrameStepMode = false;
         emit SigToggleFrameStepMode(false);
     }
-    if (m_nSeekStep == 0 && event->isAutoRepeat()) {
+
+    if (m_nSeekStep || m_pSeekTimer->isActive()) return;
+    if (event->isAutoRepeat()) {
+
             // 如果是连发，启动定时器
         if (event->key() == Qt::Key_Right) {
                     // 按下右方向键：启动定时器，设置步进为 +10秒
             if (!m_pSeekTimer->isActive()) {
                     m_nSeekStep = 10;
+                    m_pSeekTimer->setInterval(60);
                     m_pSeekTimer->start(); // 启动定时器
             }
                     event->accept();
@@ -466,23 +483,28 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
                     // 按下左方向键：启动定时器，设置步进为 -10秒
             if (!m_pSeekTimer->isActive()) {
                     m_nSeekStep = -10;
+                    m_pSeekTimer->setInterval(60);
                     m_pSeekTimer->start(); // 启动定时器
             }
                     event->accept();
                     return;
-                }
+                } else if (event->key() == Qt::Key_PageDown) {
+            // 按下左方向键：启动定时器，设置步进为 -10秒
+        if (!m_pSeekTimer->isActive()) {
+            m_nSeekStep = 20;
+            m_pSeekTimer->setInterval(150);
+            m_pSeekTimer->start(); // 启动定时器
         }
-
-    qDebug() << "MainWid::keyPressEvent:" << event->key();
+            event->accept();
+            return;
+        }
+        }
     switch (event->key())
     {
     case Qt::Key_Escape:
         if (m_bFullScreenPlay){
             emit SigPlayOrPause();
             OnFullScreenPlay();
-            OnMinBtnClicked();
-        }else {
-            emit SigPlayOrPause();
             OnMinBtnClicked();
         }
         break;
@@ -510,7 +532,7 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
         emit SigSeekBack10s();
         break;
     case Qt::Key_Right://前进5s
-        qDebug() << "前进5s==================================";
+        qDebug() << "前进5s";
         emit SigSeekForward();
         break;
     case Qt::Key_Up://增加10音量
@@ -528,7 +550,6 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
     default:
         break;
     }
-    //QMainWindow::keyReleaseEvent(event);//有这句，恢复窗口后，视频窗口最小而主窗口没有恢复
 }
 
 

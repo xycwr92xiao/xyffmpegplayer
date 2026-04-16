@@ -42,7 +42,7 @@ class VideoCtl : public QObject
 
 
 public:
-    KeyFrameAnalysis analyzeKeyFrameDistribution(AVFormatContext* fmt_ctx, int video_stream);
+    //KeyFrameAnalysis analyzeKeyFrameDistribution(AVFormatContext* fmt_ctx, int video_stream);
         bool m_bKeyFrameSparse;     // 标记当前视频关键帧是否稀少
         KeyFrameAnalysis m_KeyFrameInfo;
     //explicit VideoCtl(QObject *parent = nullptr);
@@ -78,7 +78,7 @@ signals:
     void SigFrameStep(bool forward);  // 帧步进信号
     void SigVideoTotalSeconds(int nSeconds);
     void SigVideoPlaySeconds(int nSeconds);
-
+    void sigInfoMessage(const QString& msg,int x=10,int y=10);   // 新增：发送提示信息
     void SigVideoVolume(double dPercent);
     void SigPauseStat(bool bPaused);
     void SigCloseWin();
@@ -285,9 +285,20 @@ private:
 
     float       pf_playback_rate;           // 播放速率
     int         pf_playback_rate_changed;   // 播放速率改变
+    QVector<double> m_keyframePTS;          // 存储所有关键帧时间（秒）
+        std::atomic<bool> m_bIndexBuilding;     // 索引是否正在构建
+        std::atomic<bool> m_bIndexReady;        // 索引是否已就绪
+        std::thread m_indexBuildThread;         // 索引构建线程
+        QString m_strCurrentFile;               // 当前正在构建索引的文件名
+        void buildKeyframeIndexThread();        // 索引构建线程函数
+        void buildKeyframeIndexForFile(const QString& fileName);
+        double getNextKeyframePts(double currentPts); // 查询下一个关键帧时间
 public:
     // 变速相关
     sonicStreamStruct *audio_speed_convert;
+    bool isKeyframeIndexReady() const { return m_bIndexReady; }
+        double getNextKeyframeAfter(double currentPts); // 供外部调用的接口
+        double getPreKeyframe(double currentPts); // 供外部调用的接口
 };
 
 #endif // VIDEOCTL_H

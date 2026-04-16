@@ -20,7 +20,7 @@ TransparentSubtitleWindow::TransparentSubtitleWindow(QWidget *parent)
     m_fontFamily = GlobalVars::subtitleFontFamily();
     // 从全局变量加载颜色设置
         m_textColor = GlobalVars::subtitleTextColor();
-    qDebug() << "现在使用的字体是：－－" << m_fontFamily << "颜色是：－－" << m_textColor;
+    //qDebug() << "现在使用的字体是：－－" << m_fontFamily << "颜色是：－－" << m_textColor;
         m_strokeColor = GlobalVars::subtitleStrokeColor();
         m_hoverBgColor = GlobalVars::subtitleHoverBgColor();
         m_leaveBgColor = GlobalVars::subtitleLeaveBgColor();

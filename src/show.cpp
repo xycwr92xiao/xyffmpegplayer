@@ -1008,7 +1008,7 @@ void Show::OnAudioCoverReceived(const QPixmap& cover)
 void Show::loadDefaultCover()
 {
     m_strCurrentAudioFile = GlobalVars::currentPlayFileName();
-    qDebug()<< "准备查找并加载存在封面文件－－－－－－－－－－－－－－:11222222222222222" <<  GlobalVars::currentPlayFileName();
+    //qDebug()<< "准备查找并加载存在封面文件－－－－－－－－－－－－－－:11222222222222222" <<  GlobalVars::currentPlayFileName();
     // 首先尝试加载歌曲文件同目录下的封面图片
         if (!m_strCurrentAudioFile.isEmpty()) {
             QFileInfo audioFileInfo(m_strCurrentAudioFile);

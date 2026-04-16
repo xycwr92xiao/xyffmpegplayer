@@ -1816,7 +1816,7 @@ void Playlist::initListMenu()
                     if (info.listName == m_currentPlaylistName) {
                         action->setChecked(true);
                     }
-                    qDebug() << "添加播放列表到菜单：" << info.listName;
+                    //qDebug() << "添加播放列表到菜单：" << info.listName;
                 }
             }
         }

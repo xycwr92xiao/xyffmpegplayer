@@ -189,7 +189,7 @@ void CtrlBar::on_PlayOrPauseBtn_clicked()
             }
         }
         else {
-//            qDebug() << "GlobalVars::runState()" << GlobalVars::runState();
+            qDebug() << "GlobalVars::runState()" << GlobalVars::runState();
             if (GlobalVars::runState()==0){
                 emit SigPlaySelected(GlobalVars::selectedIndex());
             }
@@ -199,8 +199,6 @@ void CtrlBar::on_PlayOrPauseBtn_clicked()
 
 void CtrlBar::OnPauseStat(bool bPaused)
 {
-    qDebug() << "CtrlBar::OnPauseStat" << bPaused;
-
     if (bPaused)
     {
         GlobalHelper::SetIcon(ui->PlayOrPauseBtn, 12, QChar(0xf04b));
@@ -270,17 +268,18 @@ void CtrlBar::on_VolumeBtn_clicked()
 }
 void CtrlBar::on_seekSecond(int nSeconds)
 {
+    //if (ui->PlaySlider->value() == 0)return;
     GlobalHelper::getIsSeeking() = 2;
+   // double targetVaue = (m_nSeconds + nSeconds )/ m_nTotalPlaySeconds;
     double currentPercent = ui->PlaySlider->value() * 1.0 / ui->PlaySlider->maximum();
     double targetVaue = currentPercent + (nSeconds * 1.0 / m_nTotalPlaySeconds);
-    targetVaue = (m_nSeconds + nSeconds )/ m_nTotalPlaySeconds;
         if (targetVaue < 0) targetVaue = 0;
         if (targetVaue > 1) targetVaue = 1;
         // 立即更新进度条到目标位置
+
     emit SigPlaySeek(targetVaue);
-        qDebug() << " 跳转到了targetVaue ："<< targetVaue;
-    QTimer::singleShot(40, this, []() {
-            qDebug() << "GlobalHelper::getIsSeeking()===" << GlobalHelper::getIsSeeking();
+        qDebug() << " 跳转到了targetVaue ："<< targetVaue << "m_nSeconds: " << m_nSeconds << " ui->PlaySlider->value() :"<< ui->PlaySlider->value();
+    QTimer::singleShot(50, this, []() {
             GlobalHelper::getIsSeeking() = 0;
     });
 }
@@ -289,7 +288,7 @@ void CtrlBar::on_seekByPercent(double nSeconds)
     GlobalHelper::getIsSeeking() = 2;
     double targetVaue = ui->PlaySlider->value() + nSeconds * MAX_SLIDER_VALUE / m_nTotalPlaySeconds;
         if (targetVaue < 0) targetVaue = 0;
-        if (targetVaue > MAX_SLIDER_VALUE) targetVaue = MAX_SLIDER_VALUE;
+        if (targetVaue > MAX_SLIDER_VALUE)targetVaue = MAX_SLIDER_VALUE;
         // 立即更新进度条到目标位置
         ui->PlaySlider->blockSignals(true);
         ui->PlaySlider->setValue(int(targetVaue));
@@ -299,7 +298,7 @@ void CtrlBar::on_seekByPercent(double nSeconds)
 // 添加新按钮的槽函数实现
 void CtrlBar::on_Backward5Btn_clicked()
 {
-    on_seekByPercent(GlobalHelper::isKeyFrameSparse() ? -11.0 : -5.0);
+    on_seekByPercent(GlobalHelper::isKeyFrameSparse() ? -10.0 : -5.0);
     emit sigInfoMessage(GlobalHelper::isKeyFrameSparse() ? "快退10秒" : "快退5秒");
 }
 // 添加新按钮的槽函数实现
@@ -307,28 +306,59 @@ void CtrlBar::on_Backward5Btn_clicked()
 void CtrlBar::on_Backward5Btn_rightClicked()
 {
     if (GlobalVars::runState()==1)
-    on_seekSecond(-10);
+    {
+        if (GlobalHelper::isKeyFrameSparse())on_seekSecond(-10);
+        else {
+            if (GlobalVars::isVideoPlaying()){
+            emit SigPlaySeek(-100);
+            QTimer::singleShot(50, this, []() {
+                    GlobalHelper::getIsSeeking() = 0;
+            });return;
+            }else {on_seekByPercent(-10);}
+        }
+    }
     else {if (GlobalVars::runState()==2)
-            on_seekByPercent(-15);}
-    emit sigInfoMessage("快退15秒");
+        {
+            on_seekByPercent(GlobalHelper::isKeyFrameSparse() ? -10.0 : -5.0);
+        }
+            }
+    emit sigInfoMessage("快退10秒");
 }
 
 void CtrlBar::on_Forward5Btn_rightClicked()
 {
-    if (GlobalVars::runState()==1)
-    on_seekSecond(GlobalHelper::isKeyFrameSparse() ? 20 : 10);
+    if (GlobalVars::runState()==1){
+        if (GlobalHelper::isKeyFrameSparse())on_seekSecond(15);
+        else {
+            if (GlobalVars::isVideoPlaying()){
+            emit SigPlaySeek(100);
+            QTimer::singleShot(50, this, []() {
+                    GlobalHelper::getIsSeeking() = 0;
+            });
+             return;
+            }else {on_seekByPercent(10);}
+        }
+    }
     else {if (GlobalVars::runState()==2)
             on_seekByPercent(10);}
-    emit sigInfoMessage(GlobalHelper::isKeyFrameSparse() ? "快进20秒" : "快进10秒");
+    emit sigInfoMessage("快进10秒");
 }
 void CtrlBar::on_Forward5Btn_clicked()
 {
     if (GlobalVars::runState()==1){
-     on_seekSecond(GlobalHelper::isKeyFrameSparse() ? 12 : 5);
-     emit sigInfoMessage(GlobalHelper::isKeyFrameSparse() ? "快进12秒" : "快进5秒");
+        if (GlobalVars::isVideoPlaying()){
+            emit SigPlaySeek(5);
+           // emit sigInfoMessage(GlobalHelper::isKeyFrameSparse() ? "快进5秒(关键祯)" : "快进5秒");
+            QTimer::singleShot(50, this, []() {
+                    GlobalHelper::getIsSeeking() = 0;
+            });
+            return;
+        }else {on_seekByPercent(5.0);}
+
     }
     else {if (GlobalVars::runState()==2)
         on_seekByPercent(5);}
+    emit sigInfoMessage("快进5秒");
 }
 void CtrlBar::OnPlaySliderValueChanged()
 {
@@ -343,16 +373,15 @@ void CtrlBar::OnPlaySliderValueChanged()
         if (GlobalHelper::subtitleWindow()) {
             GlobalHelper::subtitleWindow()->setSubtitleText("");
         }
-    QTimer::singleShot(100, this, []() {
-        qDebug() << "GlobalHelper::getIsSeeking()===" << GlobalHelper::getIsSeeking();
+    QTimer::singleShot(40, this, []() {
         GlobalHelper::getIsSeeking() = 0;
     });
 }
 void CtrlBar::OnVideoPlaySeconds(int nSeconds)
 {
-    m_nSeconds = nSeconds;
+    //if(nSeconds==-2147483648)return;
     if (GlobalHelper::getIsSeeking() == 0) {
-
+     m_nSeconds = nSeconds;
     int thh, tmm, tss;
     thh = nSeconds / 3600;
     tmm = (nSeconds % 3600) / 60;
@@ -362,6 +391,7 @@ void CtrlBar::OnVideoPlaySeconds(int nSeconds)
     ui->VideoPlayTimeTimeEdit->setTime(TotalTime);
 
     ui->PlaySlider->setValue(nSeconds * 1.0 / m_nTotalPlaySeconds * MAX_SLIDER_VALUE);
+
     }
 }
 void CtrlBar::on_speedBtn_clicked()
