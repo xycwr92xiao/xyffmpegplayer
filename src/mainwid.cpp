@@ -187,6 +187,9 @@ MainWid::MainWid(QMainWindow *parent) :
             qDebug() << "MainWid构造函数完成";
             m_splitter->setChildrenCollapsible(true);
             ui->ShowWid->setMinimumWidth(0);
+            qDebug() << "窗口初始大小：" << this->size();
+            qDebug() << "窗口最小大小：" << minimumSize();
+            qDebug() << "窗口最大大小：" << maximumSize();
             // 创建自动隐藏定时器
             // 创建播放列表自动隐藏定时器
                 m_playlistHideTimer = new QTimer(this);
@@ -429,7 +432,7 @@ void MainWid::onSeekTimerTimeout() {
     if (m_nSeekStep > 0) {
         if(m_nSeekStep==10){
         emit SigSeekForward();  // 发射快进信号 (对应原来的右键逻辑)
-            ui->ShowWid->showInfo("快进中1...");
+            //ui->ShowWid->showInfo("快进中1...");
         }
         else {SigSeekForward10s();
         ui->ShowWid->showInfo("快进中2...");
@@ -465,7 +468,7 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
         m_bFrameStepMode = false;
         emit SigToggleFrameStepMode(false);
     }
-
+    qDebug() << "0MainWid::keyPressEvent:" << event->key() << "m_nSeekStep= " << m_nSeekStep;
     if (m_nSeekStep || m_pSeekTimer->isActive()) return;
     if (event->isAutoRepeat()) {
 
@@ -474,7 +477,7 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
                     // 按下右方向键：启动定时器，设置步进为 +10秒
             if (!m_pSeekTimer->isActive()) {
                     m_nSeekStep = 10;
-                    m_pSeekTimer->setInterval(60);
+                    m_pSeekTimer->setInterval(50);
                     m_pSeekTimer->start(); // 启动定时器
             }
                     event->accept();
@@ -490,11 +493,12 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
                     return;
                 } else if (event->key() == Qt::Key_PageDown) {
             // 按下左方向键：启动定时器，设置步进为 -10秒
-        if (!m_pSeekTimer->isActive()) {
+    if (!m_pSeekTimer->isActive()) {
             m_nSeekStep = 20;
-            m_pSeekTimer->setInterval(150);
+            m_pSeekTimer->setInterval(VideoCtl::GetInstance()->m_bKeyFrameSparse>90?50:150);
+qDebug() << "1MainWid::keyPressEvent:" << event->key() << "m_nSeekStep= " << m_nSeekStep;
             m_pSeekTimer->start(); // 启动定时器
-        }
+    }
             event->accept();
             return;
         }

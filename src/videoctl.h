@@ -43,7 +43,7 @@ class VideoCtl : public QObject
 
 public:
     //KeyFrameAnalysis analyzeKeyFrameDistribution(AVFormatContext* fmt_ctx, int video_stream);
-        bool m_bKeyFrameSparse;     // 标记当前视频关键帧是否稀少
+        int m_bKeyFrameSparse;     // 标记当前视频关键帧是否稀少
         KeyFrameAnalysis m_KeyFrameInfo;
     //explicit VideoCtl(QObject *parent = nullptr);
 
@@ -101,7 +101,8 @@ public:
     void OnSpeed(float speed);
     void OnPlaySeek(double dPercent);
     void OnPlayVolume(double dPercent);
-
+    VideoState* m_CurStream;
+    double get_master_clock(VideoState *is);
     void OnAddVolume();
     void OnSubVolume();
     void OnPause();
@@ -186,7 +187,7 @@ private:
     void init_clock(Clock *c, int *queue_serial);
     
     int get_master_sync_type(VideoState *is);
-    double get_master_clock(VideoState *is);
+
     void check_external_clock_speed(VideoState *is);
     void stream_seek(VideoState *is, int64_t pos, int64_t rel);
     void stream_toggle_pause(VideoState *is);
@@ -263,7 +264,7 @@ private:
     bool m_bInited;	//< 初始化标志
     bool m_bPlayLoop; //刷新循环标志
 
-    VideoState* m_CurStream;
+
 
     SDL_Window *window;
     SDL_Renderer *renderer;
@@ -287,6 +288,7 @@ private:
     int         pf_playback_rate_changed;   // 播放速率改变
     QVector<double> m_keyframePTS;          // 存储所有关键帧时间（秒）
         std::atomic<bool> m_bIndexBuilding;     // 索引是否正在构建
+        std::atomic<bool> m_bCancelIndexBuild{false};
         std::atomic<bool> m_bIndexReady;        // 索引是否已就绪
         std::thread m_indexBuildThread;         // 索引构建线程
         QString m_strCurrentFile;               // 当前正在构建索引的文件名

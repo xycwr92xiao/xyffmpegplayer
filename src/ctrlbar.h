@@ -36,7 +36,7 @@ public:
 
 public:
     void OnVideoTotalSeconds(int nSeconds);
-    void OnVideoPlaySeconds(int nSeconds);
+    void OnVideoPlaySeconds(double nSeconds);
     void OnVideopVolume(double dPercent);
     void OnPauseStat(bool bPaused);
     void OnStopFinished();
@@ -55,6 +55,7 @@ public slots:
 private:
         void on_seekSecond(int nSeconds);
         void on_seekByPercent(double nSeconds);
+        void on_seekBySecond(double dSeconds);
     void OnPlaySliderValueChanged();
     void OnVolumeSliderValueChanged();
     void initSpeedMenu();
@@ -65,6 +66,7 @@ private slots:
     void onSpeedActionTriggered(QAction* action);  // 添加参数
     void on_PlayOrPauseBtn_clicked();
     void on_VolumeBtn_clicked();
+
 //    void on_StopBtn_clicked();
 
 
@@ -93,6 +95,7 @@ signals:
     void SigSpeed(float speed);
     void SigPlaySelected(int nIndex);  // 新增：播放指定索引的文件
     void SigFullScreenBtn();  //全屏信号
+    void sigInfoMessage(const QString& msg,int x=10,int y=10);   // 新增：发送提示信息
 private:
     Ui::CtrlBar *ui;
     int m_nTotalPlaySeconds;
