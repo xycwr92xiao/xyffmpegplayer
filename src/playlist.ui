@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>200</width>
+    <width>207</width>
     <height>400</height>
    </rect>
   </property>
@@ -110,7 +110,7 @@
       <widget class="QPushButton" name="btnSaveToNewlist">
        <property name="minimumSize">
         <size>
-         <width>16</width>
+         <width>20</width>
          <height>16</height>
         </size>
        </property>

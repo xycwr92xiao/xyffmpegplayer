@@ -138,6 +138,12 @@ public:
                 static bool isVideo = false;
                 return isVideo;
             }
+            // 文件类型标志
+            static int& getFileType()
+            {
+                static int playFileType = 0;
+                return playFileType;
+            }
         // 重置所有状态（可选）- 新增
         static void resetAll()
         {
@@ -176,23 +182,7 @@ public:
             if(dirType ==0 )settings.setValue("LastOpenDir", dir);
             else settings.setValue("LastCoverDir", dir);
         }
-        static bool IsMusic(const QString& fileName) {
-            QString lowerName = fileName.toLower();
 
-            static QStringList audioFormats = {
-                ".mp3", ".wav", ".aac", ".flac", ".m4a", ".wma", ".ape",
-                ".ogg", ".opus", ".wv", ".dts",
-                ".tta"
-            };
-
-            for (const QString& format : audioFormats) {
-                if (lowerName.endsWith(format)) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
 };
 
 #endif // GLOBALVARS_H

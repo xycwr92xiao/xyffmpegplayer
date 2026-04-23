@@ -494,6 +494,10 @@ void Show::OnDisplayMsg(QString strMsg)
 
 void Show::OnPlay(QString strFile)
 {
+    // 清除之前的频谱残留（解决切换列表时的残留问题）
+       // m_spectrumData.clear();
+       // m_showSpectrum = false;
+        update();  // 立即刷新界面
     QString strFileName = strFile.toLower();
     m_strCurrentAudioFile = strFile;
     GlobalVars::currentPlayFileName()=strFile;
@@ -503,6 +507,7 @@ void Show::OnPlay(QString strFile)
             if (!isAudio && !isVideo)
             {
                 int fileType = VideoCtl::GetInstance()->getFileType(strFileName);
+                qDebug() << "1fileType=-----------------------------------------------------" << fileType;
                 if (fileType<=0){
                     QMessageBox::warning(this,"播放失败",QString("无法播放该文件：%1\n"
                                                              "错误的代码：%2\n"
@@ -513,6 +518,7 @@ void Show::OnPlay(QString strFile)
                 }else {
                     isAudio = fileType == 1;
                     isVideo = fileType == 2;
+                    GlobalVars::getFileType()=fileType;
                 }
 
             }

@@ -112,23 +112,42 @@ int VideoCtl::upload_texture(SDL_Texture *tex, AVFrame *frame, struct SwsContext
         break;
     default:
         /* This should only happen if we are not using avfilter... */
-        *img_convert_ctx = sws_getCachedContext(*img_convert_ctx,
-                                                frame->width, frame->height, (AVPixelFormat)frame->format, frame->width, frame->height,
-                                                AV_PIX_FMT_BGRA, SWS_BICUBIC, NULL, NULL, NULL);
-        if (*img_convert_ctx != NULL) {
-            uint8_t *pixels[4];
-            int pitch[4];
-            if (!SDL_LockTexture(tex, NULL, (void **)pixels, pitch)) {
-                sws_scale(*img_convert_ctx, (const uint8_t * const *)frame->data, frame->linesize,
-                          0, frame->height, pixels, pitch);
-                SDL_UnlockTexture(tex);
-            }
-        }
-        else {
-            av_log(NULL, AV_LOG_FATAL, "Cannot initialize the conversion context\n");
-            ret = -1;
-        }
-        break;
+        // 1. 修正已弃用的像素格式
+                AVPixelFormat src_format = (AVPixelFormat)frame->format;
+                int is_yuvj = 0;
+                switch (src_format) {
+                    case AV_PIX_FMT_YUVJ420P: src_format = AV_PIX_FMT_YUV420P; is_yuvj = 1; break;
+                    case AV_PIX_FMT_YUVJ422P: src_format = AV_PIX_FMT_YUV422P; is_yuvj = 1; break;
+                    case AV_PIX_FMT_YUVJ444P: src_format = AV_PIX_FMT_YUV444P; is_yuvj = 1; break;
+                    case AV_PIX_FMT_YUVJ440P: src_format = AV_PIX_FMT_YUV440P; is_yuvj = 1; break;
+                    default: break;
+                }
+
+                // 2. 创建/获取转换上下文（使用修正后的格式）
+                *img_convert_ctx = sws_getCachedContext(*img_convert_ctx,
+                                                        frame->width, frame->height, src_format,
+                                                        frame->width, frame->height, AV_PIX_FMT_BGRA,
+                                                        SWS_BICUBIC, NULL, NULL, NULL);
+                if (*img_convert_ctx) {
+                    // 3. 明确设置颜色范围（消除警告的关键）
+                    //    src_range: 1 = full range (0-255), 0 = limited (16-235)
+                    //    dst_range: BGRA 输出通常为 full range
+                    av_opt_set_int(*img_convert_ctx, "src_range", is_yuvj ? 1 : 0, 0);
+                    av_opt_set_int(*img_convert_ctx, "dst_range", 1, 0);
+
+                    uint8_t *pixels[4];
+                    int pitch[4];
+                    if (!SDL_LockTexture(tex, NULL, (void **)pixels, pitch)) {
+                        sws_scale(*img_convert_ctx, (const uint8_t * const *)frame->data, frame->linesize,
+                                  0, frame->height, pixels, pitch);
+                        SDL_UnlockTexture(tex);
+                    }
+                } else {
+                    av_log(NULL, AV_LOG_FATAL, "Cannot initialize the conversion context\n");
+                    ret = -1;
+                }
+                break;
+
     }
     return ret;
 }
@@ -718,11 +737,10 @@ display:
 
     // 关键修复：检查是否为无效数值
     if (!std::isnan(master_clock_val) && playback_time >= 0) {
+        m_currentPlaytime = playback_time;
         emit SigVideoPlaySeconds(playback_time);
 
     }
-    //向ctrbar发送信号更新时间与进度条
-    //emit SigVideoPlaySeconds(get_master_clock(is)*pf_playback_rate);
 }
 
 int VideoCtl::queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial)
@@ -2125,6 +2143,7 @@ void VideoCtl::onGetPlayPosition()
         return;
     }
     double pos = get_master_clock(m_CurStream);
+    if (std::isnan(pos))pos =m_currentPlaytime;
     qDebug() << "获取播放位置：" << pos << "秒! " << "当前索引：" <<GlobalVars::currentPlayIndex();
     // 转换为毫秒并保存
     GlobalVars::currentPlaytime() = static_cast<qint64>(pos);
@@ -2458,6 +2477,18 @@ bool VideoCtl::StartPlay(QString strFileName, WId widPlayWid)
         // 检测文件类型
             bool isAudioFile = GlobalHelper::IsMusic(strFileName);
             bool isVideoFile = GlobalHelper::IsVideo(strFileName);
+             if (!isAudioFile && !isVideoFile){
+                 int fileType=0;
+                 if  (GlobalVars::getFileType()==0)fileType = getFileType(strFileName);
+                 else fileType =GlobalVars::getFileType();
+                 if (fileType>0){
+                     isAudioFile = fileType ==1;
+                     isVideoFile = fileType == 2;
+                 }else {
+                      qDebug() << "文件：" << strFileName  << " 无法播放！错误码："<< fileType;
+                      return false;
+                 }
+             }
             if (isAudioFile && !isVideoFile) {
                 SetAudioOnlyMode(true);
                 GlobalVars::isVideoPlaying()=false;
@@ -2468,7 +2499,7 @@ bool VideoCtl::StartPlay(QString strFileName, WId widPlayWid)
             m_bIndexReady=false;
             m_bIndexBuilding =false;
             // 启动后台关键帧索引构建（仅视频文件且未构建过）
-                if (GlobalHelper::IsVideo(strFileName) && !m_bIndexReady && !m_bIndexBuilding) {
+                if (isVideoFile && !m_bIndexReady && !m_bIndexBuilding) {
                     m_strCurrentFile = strFileName;
                     if (m_indexBuildThread.joinable())
                         m_indexBuildThread.join();
@@ -2701,7 +2732,9 @@ void VideoCtl::applyEqualizer(float* audioData, int samples, int channels, int s
 int VideoCtl::getCurrentPlayTimeMs()
 {
     if (m_CurStream) {
-        return static_cast<int>(get_master_clock(m_CurStream) * 1000);
+        double pos = get_master_clock(m_CurStream);
+        if (std::isnan(pos))pos =m_currentPlaytime;
+        return static_cast<int>(pos * 1000);
     }
     return 0;
 }
@@ -2957,7 +2990,7 @@ int VideoCtl::getFileType(const QString& strFileName)
     // 首先检查文件是否存在且可读
     QFileInfo fileInfo(strFileName);
     if (!fileInfo.exists() || !fileInfo.isReadable()) {
-        return 0;
+        return -3;
     }
     // 尝试打开文件并解析流信息
     AVFormatContext* formatCtx = nullptr;
@@ -3120,7 +3153,6 @@ void VideoCtl::StepFrameBackward()
         video_display(m_CurStream);
 
         // 更新进度条
-        //double frameTime = get_master_clock(m_CurStream);
             emit SigVideoPlaySeconds(targetTime * pf_playback_rate);
 
 
@@ -3173,6 +3205,7 @@ void VideoCtl::buildKeyframeIndexForFile(const QString& fileName)
     while (av_read_frame(fmt_ctx, &pkt) >= 0) {
         if (m_bCancelIndexBuild || m_bKeyFrameSparse>=80) {
                     qDebug() << "索引构建被取消或全部是关键祯！";
+                    m_bCancelIndexBuild = true;
                     av_packet_unref(&pkt);
                     break;
                 }
@@ -3180,15 +3213,15 @@ void VideoCtl::buildKeyframeIndexForFile(const QString& fileName)
         if (pkt.stream_index == video_stream && (pkt.flags & AV_PKT_FLAG_KEY)) {
             double pts = pkt.pts * av_q2d(stream->time_base);
             m_keyframePTS.append(pts);
-        if(analysis.totalKeyFrames==0){
             if (last_keyframe_pts != -1) {
                 interval = pts - last_keyframe_pts;
             }
             last_keyframe_pts = pts;
             sum += interval;
-            if (interval > max_interval) max_interval = interval;
-            keyframe_count++;
-            if ( i>100 && keyframe_count>=3){
+           if (interval > max_interval) max_interval = interval;
+           if(analysis.totalKeyFrames==0){
+                keyframe_count++;
+                if ( i>100 && keyframe_count>=3){
                 analysis.avgKeyFrameInterval = sum / (m_keyframePTS.size()-1);
                 analysis.maxKeyFrameInterval = max_interval;
                 analysis.totalKeyFrames = keyframe_count;
@@ -3208,13 +3241,11 @@ void VideoCtl::buildKeyframeIndexForFile(const QString& fileName)
         }
         av_packet_unref(&pkt);
     }
-
     // 排序（理论上已经有序，但为了安全）
-    std::sort(m_keyframePTS.begin(), m_keyframePTS.end());
-    m_bIndexReady = true;
+    //std::sort(m_keyframePTS.begin(), m_keyframePTS.end());
+    m_bIndexReady = !m_bCancelIndexBuild;
     m_bIndexBuilding = false;
-
-    qDebug() << "关键帧索引构建完成，共" << m_keyframePTS.size() << "个关键帧，文件:" << fileName;
+    qDebug() << "关键帧索引构建完成，共" << m_keyframePTS.size() << "个关键帧，最大间隔：" << max_interval<< ",平均："<< sum /(m_keyframePTS.size()-1) << "，文件:" << fileName;
     avformat_close_input(&fmt_ctx);
 }
 

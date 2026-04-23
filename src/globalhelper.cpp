@@ -41,8 +41,8 @@ void GlobalHelper::SetIcon(QPushButton* btn, int iconSize, QChar icon)
 {
     QFont font;
     font.setFamily("FontAwesome");
-    font.setPointSize(iconSize);
-
+    //font.setPointSize(iconSize);
+    font.setPixelSize(iconSize+2);   // ✅ 固定像素大小，不随 DPI 缩放
     btn->setFont(font);
     btn->setText(icon);
 }

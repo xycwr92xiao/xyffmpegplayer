@@ -44,6 +44,7 @@ struct PlaylistInfo {
     QString listName;
     QString jsonPath;
     int orderIndex;
+    QString password;  // 新增：播放列表口令
 };
 
 class Playlist : public QWidget
@@ -92,6 +93,9 @@ public:
         return QSize(150, 900);
     }
     void setRowHeight(int height);
+    bool isPasswordDialogActive() const { return m_passwordDialogActive; }
+    void setPasswordDialogActive(bool var0){m_passwordDialogActive = var0;};
+                QString m_currentPlaylistName ="默认列表"; // 当前播放列表名称
 public slots:
     void PlayByIndex(int nIndex);  // 播放指定索引的文件
 
@@ -151,7 +155,7 @@ private:
         void updateItemDataPath(const QString &oldPath, const QString &newPath);
         //播放列表管理相关
         QList<PlaylistInfo> m_playlistInfos; // 存储所有播放列表信息
-            QString m_currentPlaylistName ="默认列表"; // 当前播放列表名称
+
             QString m_currentPlaylistJson; // 当前播放列表JSON文件路径
             bool m_isDefaultPlaylist = true; // 是否是默认列表
             // 播放列表菜单
@@ -161,7 +165,7 @@ private:
             void loadPlaylistIndex(); // 加载播放列表索引文件
             void savePlaylistIndex(); // 保存播放列表索引文件
             void switchToPlaylist(const QString &listName, const QString &jsonPath); // 切换到指定播放列表
-            void saveAsNewPlaylist(const QString &newListName); // 另存为新播放列表
+//            void saveAsNewPlaylist(const QString &newListName,const QString &password); // 另存为新播放列表
             void deleteCurrentPlaylist(); // 删除当前播放列表
             void updateCurrentPlaylistTitle(); // 更新当前播放列表标题
             void loadPlaylistFromFile(const QString &filePath);
@@ -188,12 +192,19 @@ private slots:
                 void onFileRenamed(int index, QString oldPath, QString newPath);  // 处理文件重命名信号
 private:
     Ui::Playlist *ui;
-
+    bool m_passwordDialogActive;  // 口令对话框是否激活
     int m_nCurrentPlayListIndex=-1;
     PlaylistItemDelegate* m_pItemDelegate = nullptr; // 添加委托指针
     // 新增：重命名相关状态
         qint64 m_lastPlayPosition;  // 记录播放位置
         int m_firstIndex = -1;
+
+        bool showPlaylistConfigDialog(QString &name, QString &password, bool forEdit = false,
+                                           const QString &oldName = QString(),
+                                           const QString &oldPassword = QString());
+            void editCurrentPlaylist();
+            void saveAsNewPlaylist(const QString &newListName, const QString &password = "");
+            QString showPasswordDialog(const QString &listName);
 };
 
 

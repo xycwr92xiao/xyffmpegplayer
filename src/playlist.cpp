@@ -11,7 +11,8 @@
 #include <QStyleOptionViewItem>
 #include <QFontMetrics>
 #include <QMessageBox>
-
+#include <QFormLayout>
+#include <QLineEdit>
 #include "playlist.h"
 #include "ui_playlist.h"
 #include "GlobalVars.h"
@@ -284,11 +285,11 @@ bool Playlist::InitUi()
     ui->btnSaveToNewlist->setStyleSheet(btnStyleSheet);
     ui->btnDeleteCurrentList->setStyleSheet(btnStyleSheet2);
     // 设置保存和删除按钮图标
-     GlobalHelper::SetIcon(ui->labelIcon, 12, QChar(0xf0ca));
-    GlobalHelper::SetIcon(ui->btnSaveToNewlist, 11, QChar(0xf2e5));     // 保存图标（软盘）c7
+     GlobalHelper::SetIcon(ui->labelIcon, 14, QChar(0xf0ca));
+    GlobalHelper::SetIcon(ui->btnSaveToNewlist, 14, QChar(0xf2e5));     // 保存图标（软盘）c7
 
         // 删除图标：使用垃圾桶图标 - 与下方的删除按钮使用相同的图标
-    GlobalHelper::SetIcon(ui->btnDeleteCurrentList, 11, QChar(0xf2e6)); // 删除图标（垃圾桶）1f8
+    GlobalHelper::SetIcon(ui->btnDeleteCurrentList, 14, QChar(0xf2e6)); // 删除图标（垃圾桶）1f8
 
     ui->List->setDragEnabled(true);
     ui->List->setAcceptDrops(true);
@@ -543,18 +544,27 @@ void Playlist::on_List_itemDoubleClicked(QListWidgetItem *item)
     GlobalVars::isVideoPlaying()= GlobalHelper::IsVideo(filePath);
     GlobalVars::currentPlayFileName()=filePath;
     qDebug() << "当前播放的文件：＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝" << GlobalVars::currentPlayFileName();
+    GlobalVars::getFileType() = 0;
     // 检查文件是否存在
         QFileInfo fileInfo(filePath);
         if (!fileInfo.exists()) {
-            QMessageBox::warning(this,
-                tr("文件不存在"),
-                tr("文件 '%1' 不存在或已被删除。\n\n"
-                   "是否从播放列表中移除该文件？").arg(fileInfo.fileName()));
-
+            // 判断路径类型并构造相应提示
+            m_passwordDialogActive=true;
+                QString message;
+                if (filePath.startsWith("//")) {
+                    // 网络路径（如 //server/share）
+                    message = tr("网络连接被移除，从播放列表中移除 '%1'？").arg(fileInfo.fileName());
+                } else if (filePath.contains(QRegularExpression("^[a-zA-Z]:"))) {
+                    // 本地磁盘路径（如 C:、D:）
+                    message = tr("文件不存在，从播放列表中移除 '%1'？").arg(fileInfo.fileName());
+                } else {
+                    // 其他情况（相对路径、未知协议等）
+                    message = tr("文件不存在，从播放列表中移除 '%1'？").arg(fileInfo.fileName());
+                }
             // 用户点击确定后从播放列表中移除
             int reply = QMessageBox::question(this,
-                tr("移除文件"),
-                tr("从播放列表中移除 '%1'？").arg(fileInfo.fileName()),
+                tr("是否移除文件"),
+                message,
                 QMessageBox::Yes | QMessageBox::No);
 
             if (reply == QMessageBox::Yes) {
@@ -796,6 +806,7 @@ void Playlist::PlayByIndex(int nIndex)
                         QString filePath = pItem->data(Qt::UserRole).toString();
                         QFileInfo fileInfo(filePath);
                         if (!fileInfo.exists()) {
+                            m_passwordDialogActive=true;
                             QMessageBox::warning(this,
                                 tr("文件不存在"),
                                 tr("文件 '%1' 不存在或已被删除。\n\n"
@@ -1864,6 +1875,7 @@ void Playlist::loadPlaylistIndex()
         info.listName = obj["listName"].toString();
         info.jsonPath = obj["jsonPath"].toString();
         info.orderIndex = obj["orderIndex"].toInt();
+        info.password = obj["password"].toString();  // 新增：读取口令
         m_playlistInfos.append(info);
     }
 
@@ -1885,6 +1897,7 @@ void Playlist::savePlaylistIndex()
         obj["listName"] = info.listName;
         obj["jsonPath"] = info.jsonPath;
         obj["orderIndex"] = info.orderIndex;
+        obj["password"] = info.password;  // 新增：保存口令
         playlistArray.append(obj);
     }
 
@@ -1905,9 +1918,130 @@ void Playlist::savePlaylistIndex()
     }
 }
 
+QString Playlist::showPasswordDialog(const QString &listName)
+{
+    m_passwordDialogActive = true;  // 标记对话框激活
+    QDialog dialog(this);
+    dialog.setWindowTitle("口令验证");
+    dialog.setFixedSize(350, 180);
+    dialog.setModal(true);
+
+    dialog.setStyleSheet(R"(
+        QDialog {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            font-family: "Segoe UI", "Microsoft YaHei";
+            border: 1px solid #333;
+            border-radius: 8px;
+        }
+        QLabel {
+            color: #cccccc;
+            font-size: 14px;
+            font-weight: normal;
+            background-color: transparent;
+            padding: 0px;
+            margin: 0px 5px;
+            border: none;
+        }
+        QLineEdit {
+            background-color: #2a2a2a;
+            border: 2px solid #444;
+            border-radius: 6px;
+            color: #ffffff;
+            padding: 6px 8px;
+            font-size: 14px;
+            selection-background-color: #3a6ea5;
+            margin: 15px 25px 0px 25px;
+            min-height: 20px;
+        }
+        QLineEdit:focus {
+            border-color: #4a9eff;
+            background-color: #252525;
+        }
+        QLineEdit::placeholder {
+            color: #888;
+            font-style: italic;
+        }
+        QPushButton {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            border: 1px solid #34495e;
+            border-radius: 5px;
+            padding: 8px 28px;
+            margin: 5px;
+            font-weight: 600;
+            font-size: 14px;
+            min-width: 60px;
+            min-height: 25px;
+        }
+        QPushButton:hover {
+            background-color: #3498db;
+            border-color: #2980b9;
+        }
+        QPushButton:pressed {
+            background-color: #2980b9;
+            border-color: #1c5980;
+        }
+    )");
+
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+    layout->setSpacing(10);
+    layout->setContentsMargins(20, 20, 20, 20);
+
+    QLabel *promptLabel = new QLabel(QString("请输入播放列表 \"%1\" 的口令:").arg(listName), &dialog);
+    promptLabel->setWordWrap(true);
+    promptLabel->setAlignment(Qt::AlignCenter);
+    layout->addWidget(promptLabel);
+
+    QLineEdit *pwdEdit = new QLineEdit(&dialog);
+    pwdEdit->setEchoMode(QLineEdit::Password);
+    pwdEdit->setPlaceholderText("请输入口令");
+    layout->addWidget(pwdEdit);
+
+    layout->addSpacing(10);
+
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    QPushButton *okBtn = new QPushButton("确定", &dialog);
+    QPushButton *cancelBtn = new QPushButton("取消", &dialog);
+    btnLayout->addStretch();
+    btnLayout->addWidget(okBtn);
+    btnLayout->addWidget(cancelBtn);
+    layout->addLayout(btnLayout);
+
+    connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+    connect(cancelBtn, &QPushButton::clicked, &dialog, &QDialog::reject);
+    if (dialog.exec() == QDialog::Accepted) {
+        return pwdEdit->text();
+    }
+    //m_passwordDialogActive = false;  // 清除标记
+    return QString();
+}
 // 切换到指定播放列表
 void Playlist::switchToPlaylist(const QString &listName, const QString &jsonPath)
 {
+    // 如果不是默认列表，进行口令验证
+        if (listName != "默认列表") {
+            // 查找对应的播放列表信息
+            QString requiredPassword;
+            for (const PlaylistInfo &info : m_playlistInfos) {
+                if (info.jsonPath == jsonPath) {
+                    requiredPassword = info.password;
+                    break;
+                }
+            }
+
+            // 如果设置了口令，需要验证
+            if (!requiredPassword.isEmpty()) {
+                QString inputPassword = showPasswordDialog(listName);
+                    if (inputPassword.isEmpty()) {
+                        return;  // 用户取消，不切换
+                    }
+                    if (inputPassword != requiredPassword) {
+                        QMessageBox::warning(this, "验证失败", "口令错误，无法切换播放列表！");
+                        return;
+                    }
+            }
+        }
     // 保存当前播放列表
     saveAllData();
     // 先停止当前播放
@@ -1992,7 +2126,7 @@ void Playlist::loadPlaylistFromFile(const QString &filePath)
         QString filePath = itemData["filePath"].toString();
         QFileInfo fileInfo(filePath);
 
-        if (fileInfo.exists()) {
+        if (true) {//fileInfo.exists()
             PlaylistItemData data;
             data.filePath = filePath;
             data.fileName = fileInfo.fileName();
@@ -2059,9 +2193,77 @@ void Playlist::loadPlaylistFromFile(const QString &filePath)
     updateButtonStates();
     qDebug() << "从文件加载播放列表：" << filePath << "，包含" << ui->List->count() << "个文件";
 }
+void Playlist::editCurrentPlaylist()
+{
+    if (m_isDefaultPlaylist) {
+        return;  // 默认列表不能编辑
+    }
 
+    // 查找当前列表的索引信息
+    PlaylistInfo *currentInfo = nullptr;
+    for (int i = 0; i < m_playlistInfos.size(); i++) {
+        if (m_playlistInfos[i].jsonPath == m_currentPlaylistJson) {
+            currentInfo = &m_playlistInfos[i];
+            break;
+        }
+    }
+
+    if (!currentInfo) {
+        QMessageBox::warning(this, "错误", "未找到当前播放列表信息");
+        return;
+    }
+
+    QString newName = currentInfo->listName;
+    QString newPassword = currentInfo->password;
+
+    if (!showPlaylistConfigDialog(newName, newPassword, true,
+                                   currentInfo->listName, currentInfo->password)) {
+        return;  // 用户取消
+    }
+
+    // 如果名称改变，检查是否与其他列表重名
+    if (newName != currentInfo->listName) {
+        for (const PlaylistInfo &info : m_playlistInfos) {
+            if (info.listName == newName) {
+                QMessageBox::warning(this, "警告", "已存在同名播放列表，请使用其他名称。");
+                return;
+            }
+        }
+    }
+
+    // 更新索引中的信息
+    currentInfo->listName = newName;
+    currentInfo->password = newPassword;
+    savePlaylistIndex();
+
+    // 更新当前列表的json文件中的口令（可选，用于备份）
+    QFile file(m_currentPlaylistJson);
+    if (file.open(QIODevice::ReadOnly)) {
+        QByteArray jsonData = file.readAll();
+        file.close();
+        QJsonDocument doc = QJsonDocument::fromJson(jsonData);
+        if (doc.isObject()) {
+            QJsonObject obj = doc.object();
+            obj["password"] = newPassword;
+            QJsonDocument newDoc(obj);
+            if (file.open(QIODevice::WriteOnly)) {
+                file.write(newDoc.toJson());
+                file.close();
+            }
+        }
+    }
+
+    // 更新当前显示名称
+    m_currentPlaylistName = newName;
+    updateCurrentPlaylistTitle();
+
+    // 更新菜单
+    initListMenu();
+
+    QMessageBox::information(this, "成功", "播放列表信息已更新");
+}
 // 另存为新播放列表
-void Playlist::saveAsNewPlaylist(const QString &newListName)
+void Playlist::saveAsNewPlaylist(const QString &newListName,const QString &password)
 {
     if (newListName.isEmpty()) {
         return;
@@ -2112,6 +2314,7 @@ void Playlist::saveAsNewPlaylist(const QString &newListName)
     configData["playMode"] = GlobalVars::playMode();
     configData["playlistCount"] = ui->List->count();
     configData["autoPlay"] = GlobalHelper::GetAutoPlay();
+    configData["password"] = password;  // 新增：保存口令到json文件
 
     QJsonDocument doc(configData);
     QByteArray jsonData = doc.toJson();
@@ -2132,7 +2335,7 @@ void Playlist::saveAsNewPlaylist(const QString &newListName)
     newInfo.listName = newListName;
     newInfo.jsonPath = newJsonFile;
     newInfo.orderIndex = m_playlistInfos.size();
-
+    newInfo.password = password;  // 新增：保存口令
     m_playlistInfos.append(newInfo);
     savePlaylistIndex();
 
@@ -2193,8 +2396,19 @@ void Playlist::deleteCurrentPlaylist()
 // 更新当前播放列表标题
 void Playlist::updateCurrentPlaylistTitle()
 {
-    ui->btnListTitle->setText(m_currentPlaylistName);
-    ui->btnDeleteCurrentList->setEnabled(!m_isDefaultPlaylist);
+    // 根据当前列表名称重新判断是否为默认列表（确保状态同步）
+        m_isDefaultPlaylist = (m_currentPlaylistName == "默认列表");
+
+        ui->btnListTitle->setText(m_currentPlaylistName);
+        ui->btnDeleteCurrentList->setEnabled(!m_isDefaultPlaylist);
+        // 设置保存/编辑按钮的提示文本
+        if (m_isDefaultPlaylist) {
+            ui->btnSaveToNewlist->setToolTip("另存为新列表");
+            GlobalHelper::SetIcon(ui->btnSaveToNewlist, GlobalVars::getFullScreen()?20:14, QChar(0xf2e5));
+        } else {
+            ui->btnSaveToNewlist->setToolTip("编辑列表名称");
+            GlobalHelper::SetIcon(ui->btnSaveToNewlist, GlobalVars::getFullScreen()?20:14, QChar(0xf044));
+        }
 }
 
 // 点击列表标题
@@ -2208,28 +2422,20 @@ void Playlist::on_btnListTitle_clicked()
 
 // 另存为新列表按钮点击
 // 另存为新列表按钮点击
-#include <QInputDialog>
-// 另存为新列表按钮点击
-void Playlist::on_btnSaveToNewlist_clicked()
+// 显示自定义对话框，获取播放列表名称和口令
+// 返回 true 表示用户点击确定，false 表示取消
+bool Playlist::showPlaylistConfigDialog(QString &name, QString &password, bool forEdit,
+                                         const QString &oldName, const QString &oldPassword)
 {
-    QInputDialog dialog(this);
+    m_passwordDialogActive = true;  // 标记对话框激活
+    QDialog dialog(this);
+    dialog.setWindowTitle(forEdit ? "编辑播放列表" : "新建播放列表");
+    dialog.setFixedSize(400, 200);  // 稍微增高以适应新间距
+    dialog.setModal(true);
 
-    // 移除帮助按钮，让对话框更简洁
-    dialog.setWindowFlags(dialog.windowFlags() & ~Qt::WindowContextHelpButtonHint);
-
-    // 设置窗口属性
-    dialog.setWindowTitle("另存为新播放列表");
-    dialog.setLabelText("请输入新播放列表名称:");
-    dialog.setTextValue("");
-    dialog.setInputMode(QInputDialog::TextInput);
-
-    // **关键：关闭固定大小，改用resize并允许调整**
-    dialog.setFixedSize(400, 100); // 修改为250高度
-
-    // 暗色调样式表（修复了标签背景和高度问题）
     dialog.setStyleSheet(R"(
         /* 对话框整体样式 */
-        QInputDialog {
+        QDialog {
             background-color: #1a1a1a;
             color: #e0e0e0;
             font-family: "Segoe UI", "Microsoft YaHei";
@@ -2237,16 +2443,16 @@ void Playlist::on_btnSaveToNewlist_clicked()
             border-radius: 8px;
         }
 
-        /* 标签样式 - 关键：设置背景透明 */
+        /* 标签样式 */
         QLabel {
             color: #cccccc;
             font-size: 14px;
-            height: 24px;
             font-weight: normal;
-            background-color: transparent;  /* 设置为透明 */
-            padding: 0px;
+            background-color: transparent;
+            padding: 6px 0px 0px 0px;
             margin: 0px 5px;
-            border: none;  /* 移除边框 */
+            border: none;
+            min-height: 28px;   /* 与输入框内容区高度匹配 */
         }
 
         /* 输入框样式 */
@@ -2255,32 +2461,21 @@ void Playlist::on_btnSaveToNewlist_clicked()
             border: 2px solid #444;
             border-radius: 6px;
             color: #ffffff;
-            padding: 8px;
+            padding: 6px 8px;   /* 上下内边距减小，与标签高度协调 */
             font-size: 14px;
             selection-background-color: #3a6ea5;
-            margin: 10px 5px;
-            min-height: 20px;  /* 增加最小高度 */
+            margin: 5px 5px;
+            min-height: 20px;
         }
 
-        /* 输入框聚焦状态 */
         QLineEdit:focus {
             border-color: #4a9eff;
             background-color: #252525;
         }
 
-        /* 输入框占位符文本 */
         QLineEdit::placeholder {
             color: #888;
             font-style: italic;
-        }
-
-        /* 按钮容器样式 */
-        QDialogButtonBox {
-            background-color: transparent;
-            spacing: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #333;
-            margin-top: 15px;
         }
 
         /* 按钮通用样式 */
@@ -2289,61 +2484,85 @@ void Playlist::on_btnSaveToNewlist_clicked()
             color: #ecf0f1;
             border: 1px solid #34495e;
             border-radius: 5px;
-            padding: 10px 28px;
-            margin: 10px 5px;
+            padding: 8px 28px;
+            margin: 5px;
             font-weight: 600;
             font-size: 14px;
             min-width: 60px;
             min-height: 25px;
         }
 
-        /* 按钮悬停效果 */
         QPushButton:hover {
             background-color: #3498db;
             border-color: #2980b9;
-            transform: translateY(-1px);
         }
 
-        /* 按钮按下效果 */
         QPushButton:pressed {
             background-color: #2980b9;
             border-color: #1c5980;
-            transform: translateY(0px);
-        }
-
-        /* 确定按钮特殊样式 */
-        QPushButton#OK_Button {
-            background-color: #3498db;
-            border-color: #2980b9;
-        }
-
-        QPushButton#OK_Button:hover {
-            background-color: #5dade2;
-            border-color: #3498db;
-        }
-
-        /* 取消按钮样式 */
-        QPushButton#Cancel_Button {
-            background-color: #555;
-            border-color: #666;
-        }
-
-        QPushButton#Cancel_Button:hover {
-            background-color: #777;
-            border-color: #888;
         }
     )");
 
-    // 使用 exec() 显示对话框
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+    layout->setSpacing(10);
+    layout->setContentsMargins(20, 20, 20, 20);
+
+    // 使用 QFormLayout 并调整对齐方式
+    QFormLayout *formLayout = new QFormLayout();
+    formLayout->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    formLayout->setHorizontalSpacing(15);
+    formLayout->setVerticalSpacing(12);   // 增加行间距
+
+    QLineEdit *nameEdit = new QLineEdit(&dialog);
+    nameEdit->setText(oldName);
+    nameEdit->setPlaceholderText("请输入列表名称");
+    formLayout->addRow("列表名称:", nameEdit);
+
+    QLineEdit *pwdEdit = new QLineEdit(&dialog);
+    pwdEdit->setText(oldPassword);
+    pwdEdit->setPlaceholderText("留空表示无口令");
+    pwdEdit->setEchoMode(QLineEdit::Password);
+    formLayout->addRow("口    令:", pwdEdit);
+
+    layout->addLayout(formLayout);
+
+    // 加大按钮上方的间距：插入一个垂直间隔
+    layout->addSpacing(15);   // 增加15像素空白
+
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    QPushButton *okBtn = new QPushButton("确定", &dialog);
+    QPushButton *cancelBtn = new QPushButton("取消", &dialog);
+    btnLayout->addStretch();
+    btnLayout->addWidget(okBtn);
+    btnLayout->addWidget(cancelBtn);
+    layout->addLayout(btnLayout);
+
+    connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+    connect(cancelBtn, &QPushButton::clicked, &dialog, &QDialog::reject);
+
     if (dialog.exec() == QDialog::Accepted) {
-        QString newListName = dialog.textValue();
-        if (!newListName.isEmpty()) {
-            saveAsNewPlaylist(newListName);
+        name = nameEdit->text().trimmed();
+        password = pwdEdit->text();
+        return !name.isEmpty();
+    }
+    return false;
+}
+// 另存为新列表按钮点击
+void Playlist::on_btnSaveToNewlist_clicked()
+{
+    if (m_isDefaultPlaylist) {
+        // 默认列表：新建列表功能
+        QString newListName;
+        QString password;
+        if (!showPlaylistConfigDialog(newListName, password, false)) {
+            return;
         }
-        qDebug() << "输入的内容:" << newListName;
+        saveAsNewPlaylist(newListName, password);
+    } else {
+        // 非默认列表：编辑当前列表
+        editCurrentPlaylist();
     }
 }
-
 // 删除当前列表按钮点击
 void Playlist::on_btnDeleteCurrentList_clicked()
 {
@@ -2381,5 +2600,7 @@ void Playlist::onPlaylistMenuTriggered(QAction *action)
             }
         }
     }
+    // 刷新菜单，确保勾选状态与实际当前列表一致
+        initListMenu();
 }
 

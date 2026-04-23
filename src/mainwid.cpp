@@ -460,6 +460,11 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
     //         if(event->key() == Qt::Key_M)
     //             ···
     //     }
+    if (m_stPlaylist.isPasswordDialogActive()) {
+            m_stPlaylist.setPasswordDialogActive(false);
+            event->accept();
+            return;
+        }
     if (m_bFullScreenPlay) {
         if (!(event->key() == Qt::Key_Left || event->key() == Qt::Key_Right || event->key() == Qt::Key_Up || event->key() == Qt::Key_Down))
             UpdateMouseActivity();
@@ -468,7 +473,7 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
         m_bFrameStepMode = false;
         emit SigToggleFrameStepMode(false);
     }
-    qDebug() << "0MainWid::keyPressEvent:" << event->key() << "m_nSeekStep= " << m_nSeekStep;
+   // qDebug() << "0MainWid::keyPressEvent:" << event->key() << "m_nSeekStep= " << m_nSeekStep;
     if (m_nSeekStep || m_pSeekTimer->isActive()) return;
     if (event->isAutoRepeat()) {
 
@@ -496,7 +501,7 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
     if (!m_pSeekTimer->isActive()) {
             m_nSeekStep = 20;
             m_pSeekTimer->setInterval(VideoCtl::GetInstance()->m_bKeyFrameSparse>90?50:150);
-qDebug() << "1MainWid::keyPressEvent:" << event->key() << "m_nSeekStep= " << m_nSeekStep;
+//qDebug() << "1MainWid::keyPressEvent:" << event->key() << "m_nSeekStep= " << m_nSeekStep;
             m_pSeekTimer->start(); // 启动定时器
     }
             event->accept();
@@ -1133,7 +1138,7 @@ void MainWid::OnFullScreenPlay()
                                  QPushButton *labelIcon = m_stPlaylist.findChild<QPushButton*>("labelIcon");
                                  if (labelIcon) {
                                          // 全屏时设置更大的图标（16px）
-                                         GlobalHelper::SetIcon(labelIcon, 16, QChar(0xf00b)); // 列表图标
+                                         GlobalHelper::SetIcon(labelIcon, 16, QChar(0xf0ca)); // 列表图标
                                          // 调整按钮大小
                                          labelIcon->setFixedSize(28, 28);
                                          labelIcon->setIconSize(QSize(20, 20));
@@ -1161,7 +1166,7 @@ void MainWid::OnFullScreenPlay()
 
                                          if (btnSave) {
                                              // 全屏时设置更大的图标（16px）
-                                             GlobalHelper::SetIcon(btnSave, 18, QChar(0xf2e5)); // 软盘图标
+                                             GlobalHelper::SetIcon(btnSave, 18, m_stPlaylist.m_currentPlaylistName == "默认列表"?QChar(0xf2e5):QChar(0xf044)); // 软盘图标
                                              // 调整按钮大小
                                              btnSave->setFixedSize(28, 28);
                                              btnSave->setIconSize(QSize(20, 20));
@@ -1187,7 +1192,7 @@ void MainWid::OnFullScreenPlay()
 
                                          if (btnDelete) {
                                              // 全屏时设置更大的图标（16px）
-                                             GlobalHelper::SetIcon(btnDelete, 18, QChar(0xf014)); // 垃圾桶图标
+                                             GlobalHelper::SetIcon(btnDelete, 18, QChar(0xf2e6)); // 垃圾桶图标
                                              // 调整按钮大小
                                              btnDelete->setFixedSize(28, 28);
                                              btnDelete->setIconSize(QSize(20, 20));
@@ -1330,7 +1335,7 @@ void MainWid::OnFullScreenPlay()
 
                             if (btnSave) {
                                 // 窗口模式时恢复正常图标尺寸（10px）
-                                GlobalHelper::SetIcon(btnSave, 12, QChar(0xf2e5)); // 软盘图标
+                                GlobalHelper::SetIcon(btnSave, 14, m_stPlaylist.m_currentPlaylistName == "默认列表"?QChar(0xf2e5):QChar(0xf044)); // 软盘图标
                                 // 恢复按钮大小
                                 btnSave->setFixedSize(22, 22);
                                 btnSave->setIconSize(QSize(16, 16));
@@ -1354,7 +1359,7 @@ void MainWid::OnFullScreenPlay()
 
                             if (btnDelete) {
                                 // 窗口模式时恢复正常图标尺寸（10px）
-                                GlobalHelper::SetIcon(btnDelete, 12, QChar(0xf014)); // 垃圾桶图标
+                                GlobalHelper::SetIcon(btnDelete, 14, QChar(0xf2e6)); // 垃圾桶图标
                                 // 恢复按钮大小
                                 btnDelete->setFixedSize(20, 20);
                                 btnDelete->setIconSize(QSize(16, 16));

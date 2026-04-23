@@ -77,7 +77,7 @@ signals:
     void SigFrameDimensionsChanged(int nFrameWidth, int nFrameHeight); //<视频宽高发生变化
     void SigFrameStep(bool forward);  // 帧步进信号
     void SigVideoTotalSeconds(int nSeconds);
-    void SigVideoPlaySeconds(int nSeconds);
+    void SigVideoPlaySeconds(double nSeconds);
     void sigInfoMessage(const QString& msg,int x=10,int y=10);   // 新增：发送提示信息
     void SigVideoVolume(double dPercent);
     void SigPauseStat(bool bPaused);
@@ -295,6 +295,7 @@ private:
         void buildKeyframeIndexThread();        // 索引构建线程函数
         void buildKeyframeIndexForFile(const QString& fileName);
         double getNextKeyframePts(double currentPts); // 查询下一个关键帧时间
+        double m_currentPlaytime =0;//当前播放时间（秒）
 public:
     // 变速相关
     sonicStreamStruct *audio_speed_convert;

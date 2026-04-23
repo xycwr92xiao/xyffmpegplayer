@@ -273,15 +273,12 @@ void CtrlBar::on_seekSecond(int nSeconds)
 {
     //if (ui->PlaySlider->value() == 0)return;
     GlobalHelper::getIsSeeking() = 2;
-   // double targetVaue = (m_nSeconds + nSeconds )/ m_nTotalPlaySeconds;
     double currentPercent = ui->PlaySlider->value() * 1.0 / ui->PlaySlider->maximum();
     double targetVaue = currentPercent + (nSeconds * 1.0 / m_nTotalPlaySeconds);
         if (targetVaue < 0) targetVaue = 0;
         if (targetVaue > 1) targetVaue = 1;
         // 立即更新进度条到目标位置
-
     emit SigPlaySeek(targetVaue);
-        qDebug() << " 跳转到了targetVaue ："<< targetVaue << "m_nSeconds: " << m_nSeconds << " ui->PlaySlider->value() :"<< ui->PlaySlider->value();
     QTimer::singleShot(50, this, []() {
             GlobalHelper::getIsSeeking() = 0;
     });
@@ -324,10 +321,12 @@ void CtrlBar::on_Backward5Btn_clicked()
     if (GlobalVars::isVideoPlaying() && GlobalHelper::isKeyFrameSparse()){
         VideoCtl* vctl = VideoCtl::GetInstance();
         double currentSec = vctl->get_master_clock(vctl->m_CurStream);
+        if (!std::isnan(currentSec))currentSec = m_nSeconds;
         if (vctl->isKeyframeIndexReady()){
             double nextKey = vctl->getPreKeyframe(currentSec);
             emit sigInfoMessage(QString("快退(关键帧): %1秒").arg(QString::number((currentSec-nextKey), 'f', 1)));
             on_seekBySecond(nextKey);
+            m_nSeconds=nextKey;
             return;
         }
     }
@@ -343,11 +342,13 @@ void CtrlBar::on_Forward5Btn_rightClicked()
         } else if (GlobalHelper::isKeyFrameSparse())on_seekSecond(15);
         else {
             VideoCtl* vctl = VideoCtl::GetInstance();
-            double currentSec = vctl->get_master_clock(vctl->m_CurStream);
+           double currentSec = m_nSeconds;
           if (vctl->m_KeyFrameInfo.maxKeyFrameInterval<=2){
               double step=(int)(vctl->m_KeyFrameInfo.maxKeyFrameInterval+3.99);
               on_seekBySecond(currentSec+step);
-              sigInfoMessage(QString("快进: %1秒").arg(QString::number((step), 'f', 1)));return;}
+              m_nSeconds=currentSec+step;//防止连续快进时，m_nSeconds没有更新，这里强制更新
+              sigInfoMessage(QString("快进: %1秒").arg(QString::number((step), 'f', 1)));
+              return;}
           else {on_seekByPercent(10);}
         }
     }
@@ -361,19 +362,22 @@ void CtrlBar::on_Forward5Btn_clicked()
     double step = GlobalHelper::isKeyFrameSparse() && GlobalVars::isVideoPlaying()  ? 11.0 : 5.0;
     if (GlobalVars::runState()==1 && GlobalVars::isVideoPlaying()){
           VideoCtl* vctl = VideoCtl::GetInstance();
-          double currentSec = vctl->get_master_clock(vctl->m_CurStream);
-          if (std::isnan(currentSec)) {qDebug() << " 获取到的播放时间值 ：currentSec : " <<currentSec;}
+          double currentSec = m_nSeconds;
         if (vctl->m_KeyFrameInfo.maxKeyFrameInterval<=2){
             step=(int)(vctl->m_KeyFrameInfo.maxKeyFrameInterval+1.99);
             on_seekBySecond(currentSec+step);
-            sigInfoMessage(QString("快进: %1秒").arg(QString::number((step), 'f', 1)));return;}
+            m_nSeconds=currentSec+step;//防止连续快进时，m_nSeconds没有更新，这里强制更新
+            sigInfoMessage(QString("快进: %1秒").arg(QString::number((step), 'f', 1)));
+            //qDebug() << " 跳转到了 ：currentSec : "<< currentSec << "currentSec+step :" << currentSec+step << "MAX_SLIDER_VALUE=" << MAX_SLIDER_VALUE;
+            return;}
+
             if (GlobalHelper::isKeyFrameSparse() && vctl->isKeyframeIndexReady()) {
                 double nextKey = vctl->getNextKeyframeAfter(currentSec);
                 if (nextKey > 0) {
                     // 精确跳到下一个关键帧
                     double targetSec = nextKey;
                     step = targetSec - currentSec;
-                    qDebug() << " 跳转到了 ：currentSec : "<< currentSec << "targetSec :" << targetSec << "MAX_SLIDER_VALUE=" << MAX_SLIDER_VALUE;
+                   // qDebug() << " 跳转到了 ：currentSec : "<< currentSec << "targetSec :" << targetSec << "MAX_SLIDER_VALUE=" << MAX_SLIDER_VALUE;
                      emit sigInfoMessage(QString("快进(关键帧): %1秒").arg(QString::number((targetSec-currentSec), 'f', 1)));
                      on_seekBySecond(targetSec);
                      return;
@@ -398,15 +402,16 @@ void CtrlBar::OnPlaySliderValueChanged()
         if (GlobalHelper::subtitleWindow()) {
             GlobalHelper::subtitleWindow()->setSubtitleText("");
         }
-    QTimer::singleShot(50, this, []() {
+    QTimer::singleShot((GlobalHelper::getIsSeeking() == 3?300:50), this, []() {
         GlobalHelper::getIsSeeking() = 0;
     });
 }
 void CtrlBar::OnVideoPlaySeconds(double nSeconds)
 {
     //if(nSeconds==-2147483648)return;
+
     if (GlobalHelper::getIsSeeking() == 0) {
-     m_nSeconds = (int)nSeconds;
+     m_nSeconds = nSeconds;
     int thh, tmm, tss;
     thh = nSeconds / 3600;
     tmm = ((int)nSeconds % 3600) / 60;
