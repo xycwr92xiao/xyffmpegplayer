@@ -240,8 +240,6 @@ void CtrlBar::OnSpeed(float speed)
 
 }
 
-
-
 void CtrlBar::OnVolumeSliderValueChanged()
 {
     double dPercent = ui->VolumeSlider->value()*1.0 / ui->VolumeSlider->maximum();
@@ -249,8 +247,6 @@ void CtrlBar::OnVolumeSliderValueChanged()
     emit sigInfoMessage(QString("音量：%1 %").arg(QString::number(dPercent*100, 'f', 1)));
     OnVideopVolume(dPercent);
 }
-
-
 
 void CtrlBar::on_VolumeBtn_clicked()
 {
@@ -411,7 +407,7 @@ void CtrlBar::OnPlaySliderValueChanged()
     QTime targetTime(targetSeconds / 3600, (targetSeconds % 3600) / 60, targetSeconds % 60);
     ui->VideoPlayTimeTimeEdit->setTime(targetTime);
     emit SigPlaySeek(dPercent);
-    //qDebug() << " 跳转到了 ："<< targetTime << "GlobalHelper::getIsSeeking()--" << GlobalHelper::getIsSeeking();
+    qDebug() << " 跳转到了 ："<< targetTime << "GlobalHelper::getIsSeeking()--" << GlobalHelper::getIsSeeking();
     // 通过全局变量清除字幕
         if (GlobalHelper::subtitleWindow()) {
             GlobalHelper::subtitleWindow()->setSubtitleText("");
