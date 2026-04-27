@@ -114,7 +114,7 @@ public:
 public slots:
     void SetAudioOnlyMode(bool audioOnly); // 设置纯音频模式
     void onGetPlayPosition();  // 获取当前播放位置
-    void onSetPlayPosition();  // 设置播放位置
+    void onSetPlayPosition(double toPostion);  // 设置播放位置
     void runFadeProc(int optionYype);
 private:
     bool m_bFrameStepMode =false;        // 逐帧播放模式标志
@@ -295,7 +295,12 @@ private:
         void buildKeyframeIndexThread();        // 索引构建线程函数
         void buildKeyframeIndexForFile(const QString& fileName);
         double getNextKeyframePts(double currentPts); // 查询下一个关键帧时间
-        double m_currentPlaytime =0;//当前播放时间（秒）
+        double m_currentPlaytime =0;//当前播放时间（秒
+        QTimer* m_seekRetryTimer = nullptr;
+        void doSetPlayPosition(double toPostion);
+        qint64 m_pendingSeekPosition = 0;
+        int m_seekRetryCount = 0;
+        bool m_ready =false;
 public:
     // 变速相关
     sonicStreamStruct *audio_speed_convert;

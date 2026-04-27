@@ -43,6 +43,7 @@ public:
 	 */
 	bool Init();
     void updateSubtitleWindowPosition();
+    void updateInfoWindowPosition();
 protected:
 	/**
 	 * @brief	放下事件
@@ -109,12 +110,14 @@ public slots:
                                            const QColor& hoverBgColor, const QColor& leaveBgColor,
                                            bool keepBackground);
     void OnLyricDownloaded(const QString& lrcPath);  // 新增：处理歌词下载完成信号
+    void showInfo(const QString& text,int x=10,int y=8);     // 显示提示信息
 private:
     QVector<float> m_spectrumData;
     int m_spectrumBands;
     bool m_bAudioMode;
     bool m_showSpectrum;
     bool isReSizeWin = false;
+    bool m_isPause = false;
 	/**
 	 * @brief	显示信息
 	 * 
@@ -140,7 +143,6 @@ private:
         Subtitle* m_pSubtitle;
         QLabel* m_pSubtitleLabel;
         TransparentSubtitleWindow* m_pSubtitleWindow;
-
         QTimer* m_pSubtitleTimer;
         int m_nCurrentPlayTimeMs;
         QString m_currentSubtitleText;
@@ -163,6 +165,7 @@ private:
         // 绘制音频信息
         void drawAudioInfo(QPainter& painter);
         void loadDefaultCover();
+        void onInfoTimerTimeout();
 private slots:
     void OnUpdateSubtitle();
     void OnSubtitleChanged(const QString& text);
@@ -170,6 +173,7 @@ private slots:
                                  const QString& album, const QString& genre,
                                  int year, int bitrate, int sampleRate);
     void OnAudioCoverReceived(const QPixmap& cover);
+
 signals:
     void SigSubtitleTextChanged(const QString& text);
     void SigVideoSizeChanged(int width, int height);  // 新增：视频尺寸变化信号
@@ -193,7 +197,9 @@ private:
     int m_nLastFrameHeight;
 
     QTimer timerShowCursor;
-
+    QTimer* m_pInfoTimer;                  // 控制显示时长的定时器
+    TransparentSubtitleWindow* m_pInfoWindow;
+    int tipIofoWinWidth =0;
     QMenu m_stMenu;
     QActionGroup m_stActionGroup;
     // 添加拖动相关变量
@@ -210,6 +216,7 @@ private:
 
         // 获取支持的音频格式
         QString getSupportedAudioFormats();
+        QTimer* m_pClickTimer;
 };
 
 #endif // DISPLAY_H

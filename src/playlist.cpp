@@ -390,7 +390,14 @@ bool Playlist::InitUi()
                              // 确保只有一个选中项
                              ui->List->clearSelection();
                              pItem = ui->List->item(0);
-                         }else on_List_itemDoubleClicked(pItem);
+                         }else {on_List_itemDoubleClicked(pItem);
+     qDebug() << "自动跳转3 --------m_lastPlayPosition----:" << m_lastPlayPosition << "GlobalVars::currentPlaytime()="<<GlobalVars::currentPlaytime();
+                             if (m_lastPlayPosition > 0) {
+                                                 QTimer::singleShot(80, this, [this]() {
+                                                     emit SigSetPlayPosition(m_lastPlayPosition);
+                                                 });
+                                             }
+                         }
                          //ui->List->setCurrentRow(GlobalHelper::haveCommandLine()?0:lastIndex);
                      }
                  });
@@ -501,7 +508,7 @@ bool Playlist::ConnectSignalSlots()
                                   // 播放
                                   PlayByIndex(index);
                                   // 等待文件加载完成
-                                  QTimer::singleShot(20, this, [this, position]() {
+                                  QTimer::singleShot(80, this, [this, position]() {
                                       // 设置播放位置
                                       GlobalVars::isRenameing()=false;
                                       emit SigSetPlayPosition(position);
@@ -612,6 +619,7 @@ void Playlist::on_List_itemDoubleClicked(QListWidgetItem *item)
             loadDurationInBackground(index);
         }
     emit SigPlay(item->data(Qt::UserRole).toString());
+
         GlobalVars::currentPlayIndex() = index;
         ui->List->setCurrentRow(index);
         GlobalVars::selectedIndex() = index;
@@ -1175,7 +1183,7 @@ void Playlist::saveAllData()
     configData["playMode"] = GlobalVars::playMode();
     configData["playlistCount"] = ui->List->count();
     configData["autoPlay"] = GlobalHelper::GetAutoPlay();
-
+    configData["currentPosition"] = GlobalVars::currentPlaytime();
     // 3. 保存到统一的 JSON 文件
     QJsonDocument doc(configData);
     QByteArray jsonData = doc.toJson();
@@ -1186,7 +1194,7 @@ void Playlist::saveAllData()
         file.write(jsonData);
         file.close();
         qDebug() << "所有数据已保存到：" << m_currentPlaylistJson;
-        qDebug() << "数据大小：" << jsonData.size() << "字节";
+        qDebug() << "数据大小：" << jsonData.size() << "字节, 当前位置：currentPosition=" << GlobalVars::currentPlaytime();
     } else {
         qDebug() << "无法保存数据到：" << m_currentPlaylistJson;
     }
@@ -1258,20 +1266,26 @@ void Playlist::loadPlaylistData()
     if (configData.contains("currentIndex")) {
         int savedIndex = configData["currentIndex"].toInt();
         GlobalVars::currentPlayIndex() = savedIndex;
-        qDebug() << "加载当前播放索引：" << savedIndex;
+        qDebug() << "1加载当前播放索引：" << savedIndex;
     }
-
+    if (configData.contains("currentPosition")) {
+        double lastPlayPosition  = configData["currentPosition"].toDouble();
+        GlobalVars::currentPlaytime() = lastPlayPosition ;
+        m_lastPlayPosition  = lastPlayPosition;
+        qDebug() << "2加载当前播放位置：" << lastPlayPosition ;
+    }
     if (configData.contains("playMode")) {
         int savedMode = configData["playMode"].toInt();
         GlobalVars::playMode() = savedMode;
-        qDebug() << "加载播放模式：" << savedMode;
+        qDebug() << "3加载播放模式：" << savedMode;
     }
 
     if (configData.contains("autoPlay")) {
         bool autoPlay = configData["autoPlay"].toBool();
         GlobalHelper::SaveAutoPlay(autoPlay);
-        qDebug() << "加载自动播放设置：" << autoPlay;
+        qDebug() << "4加载自动播放设置：" << autoPlay;
     }
+
 }
 // 添加更新项显示的函数
 void Playlist::updateItemDisplay(int index, bool forceUpdate)
@@ -2083,6 +2097,12 @@ void Playlist::switchToPlaylist(const QString &listName, const QString &jsonPath
            // 使用单次定时器延迟播放，确保UI已更新
            QTimer::singleShot(100, this, [this, savedIndex]() {
                PlayByIndex(savedIndex);
+qDebug() << "自动跳转6 --------m_lastPlayPosition----:" << m_lastPlayPosition << "GlobalVars::currentPlaytime()="<<GlobalVars::currentPlaytime();
+               if (m_lastPlayPosition > 0) {
+                       QTimer::singleShot(80, this, [this]() {
+                           emit SigSetPlayPosition(m_lastPlayPosition);
+                       });
+                   }
            });
        } else if (ui->List->count() > 0) {
            // 如果保存的索引无效，但列表不为空，选中第一项
@@ -2170,8 +2190,7 @@ void Playlist::loadPlaylistFromFile(const QString &filePath)
         GlobalVars::currentPlayIndex() = -1;
         m_nCurrentPlayListIndex = -1;
     }
-
-    // 如果列表不为空但当前索引无效，选中第一项
+        // 如果列表不为空但当前索引无效，选中第一项
         if (ui->List->count() > 0 && (GlobalVars::currentPlayIndex() < 0 || GlobalVars::currentPlayIndex() >= ui->List->count())) {
             ui->List->setCurrentRow(0);
             GlobalVars::selectedIndex() = 0;

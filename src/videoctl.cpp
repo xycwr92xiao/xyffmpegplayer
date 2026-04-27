@@ -620,11 +620,8 @@ void VideoCtl::video_refresh(void *opaque, double *remaining_time)
 {
     VideoState *is = (VideoState *)opaque;
     double time;
-
     Frame *sp, *sp2;
-
     double rdftspeed = 0.02;
-
     if (!is->paused && get_master_sync_type(is) == AV_SYNC_EXTERNAL_CLOCK && is->realtime)
         check_external_clock_speed(is);
 
@@ -738,8 +735,9 @@ display:
     // 关键修复：检查是否为无效数值
     if (!std::isnan(master_clock_val) && playback_time >= 0) {
         m_currentPlaytime = playback_time;
+        m_ready = true;
+        GlobalVars::currentPlaytime()=m_currentPlaytime;
         emit SigVideoPlaySeconds(playback_time);
-
     }
 }
 
@@ -2150,16 +2148,58 @@ void VideoCtl::onGetPlayPosition()
     GlobalVars::isRenameing()=true;
     SigStop();  // 停止播放，以避免改名失败
 }
-void VideoCtl::onSetPlayPosition()
+void VideoCtl::onSetPlayPosition(double toPostion)
 {
-    // 检查是否有有效的播放位置和文件
-    qDebug() << "无效的播放位置，从头开始播放" << GlobalVars::currentPlaytime();
-        if (GlobalVars::currentPlaytime() <= 0) {
-
+    if (toPostion <= 0) {
+            qDebug() << "onSetPlayPosition: invalid position" << toPostion;
             return;
         }
+      // 如果流已经就绪，立即执行
+     if (m_ready) {
+         qDebug() << "00000start:  onSetPlayPosition: retry ! m_seekRetryCount=0";
+         doSetPlayPosition(toPostion);
+         return;
+     }
+     // 流未就绪，启动轮询重试
+         if (!m_seekRetryTimer) {
+             m_seekRetryTimer = new QTimer(this);
+             m_seekRetryTimer->setInterval(20);
+             connect(m_seekRetryTimer, &QTimer::timeout, this, [this]() {
+                 if (m_ready) {
+                     // 流已就绪，停止计时器并执行 seek
+                     m_seekRetryTimer->stop();
+                     doSetPlayPosition(m_pendingSeekPosition);
+                     qDebug() << "成功跳转 m_seekRetryCount:=" << m_seekRetryCount;
+                     m_pendingSeekPosition = 0;
+                     m_seekRetryCount = 0;
 
-    double pos = GlobalVars::currentPlaytime();
+                 } else {
+                     m_seekRetryCount++;
+                     if (m_seekRetryCount >= 20) {
+                         // 超时放弃
+                         m_seekRetryTimer->stop();
+                         qDebug() << "onSetPlayPosition: retry timeout after"
+                                  << (400) << "ms";
+                         m_pendingSeekPosition = 0;
+                         m_seekRetryCount = 0;
+                     }
+                 }
+             });
+         }
+         if (m_seekRetryTimer->isActive()) {
+                 m_seekRetryTimer->stop();
+                 m_seekRetryCount = 0;
+             }
+          m_pendingSeekPosition = toPostion;
+          m_seekRetryTimer->start();
+}
+void VideoCtl::doSetPlayPosition(double toPostion)
+{
+    if (m_CurStream == nullptr) {
+            qDebug() << "doSetPlayPosition: m_CurStream is null, cannot seek";
+            return;
+        }
+    double pos = toPostion;//GlobalVars::currentPlaytime();
     if (std::isnan(pos))
         pos = (double)m_CurStream->seek_pos / AV_TIME_BASE;
     if (m_CurStream->ic->start_time != AV_NOPTS_VALUE && pos < m_CurStream->ic->start_time / (double)AV_TIME_BASE)
@@ -2167,7 +2207,6 @@ void VideoCtl::onSetPlayPosition()
     stream_seek(m_CurStream, (int64_t)(pos * AV_TIME_BASE),0);
 
 }
-
 
 void VideoCtl::UpdateVolume(int sign, double step)
 {
@@ -2324,8 +2363,7 @@ void VideoCtl::OnPause()
         return;
     }
     SetFrameStepMode(false);
-    qDebug() << "目前的播放状态-------------->：" << GlobalVars::runState();
-
+    //qDebug() << "目前的播放状态-------------->：" << GlobalVars::runState();
     if (GlobalVars::runState() == 1){
         runFadeProc(0);
     }else {
@@ -2340,6 +2378,7 @@ void VideoCtl::OnStop()
     m_nFrameW = 0;
     m_nFrameH = 0;
     m_bPlayLoop = false;
+    GlobalVars::runState()=0;
 }
 
 VideoCtl::VideoCtl(QObject *parent) :
@@ -2463,6 +2502,8 @@ bool VideoCtl::StartPlay(QString strFileName, WId widPlayWid)
 {
     m_bPlayLoop = false;
     m_bKeyFrameSparse=0;
+    m_currentPlaytime =0;
+    m_ready =false;
         if (m_tPlayLoopThread.joinable())
         {
             m_tPlayLoopThread.join();

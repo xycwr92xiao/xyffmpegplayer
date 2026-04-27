@@ -220,6 +220,12 @@ MainWid::MainWid(QMainWindow *parent) :
           m_pSeekTimer->setInterval(60); // 设置间隔为100毫秒（即按住半秒后触发一次，之后每半秒触发一次）
           // 2. 连接定时器信号到槽函数
           connect(m_pSeekTimer, &QTimer::timeout, this, &MainWid::onSeekTimerTimeout);
+          m_doubleClickTimer = new QTimer(this);
+          m_doubleClickTimer->setSingleShot(true);
+          connect(m_doubleClickTimer, &QTimer::timeout, this, [this]() {
+                 emit SigPlayOrPause();
+                 m_doubleClickTimer->stop();
+          });
 }
 
 MainWid::~MainWid()
@@ -657,6 +663,11 @@ bool MainWid::eventFilter(QObject *watched, QEvent *event)
                 optionBz = 1;
                 if (mouseEvent->button() == Qt::LeftButton) {
                      changeCtrlTileShow();   //切换显示与隐藏
+                      bool isMenuVisible = m_onMenu;
+                      m_onMenu = false;
+                     if (m_bFullScreenPlay && !m_bPlaylistVisible && !isMenuVisible) {
+                                     m_doubleClickTimer->start(300);
+                     }
                 }else {
                     m_bFullscreenCtrlBarShow = false;
                     UpdateMouseActivity();
@@ -672,10 +683,13 @@ bool MainWid::eventFilter(QObject *watched, QEvent *event)
                 }
                 break;
             }
-
             case QEvent::MouseButtonDblClick:
             {
                 optionBz = 2;
+                if (m_doubleClickTimer->isActive()) {
+                        m_doubleClickTimer->stop();
+                    }
+                qDebug() << "1111视频窗口双击事件，已放行！ optionBz = "<< optionBz << "m_onMenu==" << m_onMenu;
                 UpdateMouseActivity();
                 // 记录鼠标位置
                 m_lastMousePos = mouseEvent->globalPos();
@@ -687,24 +701,28 @@ bool MainWid::eventFilter(QObject *watched, QEvent *event)
                     QRect playlistRect = ui->PlaylistWid->geometry();
                     if (!playlistRect.contains(mouseEvent->globalPos()))
                     {
-                        // 点击位置不在播放列表内，隐藏播放列表
-                        ui->PlaylistWid->hide();
-                        // 恢复播放列表的父窗口和样式
-                        ui->PlaylistWid->setParent(this);
-                        ui->PlaylistWid->setWindowFlags(Qt::Widget);
-                        ui->PlaylistWid->setStyleSheet("");
-                        m_playlistHideTimer = nullptr;
-                        // 重新将播放列表添加到分割器
-                        if (m_splitter && m_splitter->indexOf(ui->PlaylistWid) == -1) {
-                            m_splitter->addWidget(ui->PlaylistWid);
-                        }
+                        //showFullscreenPlaylist(false);
+                        ui->PlaylistWid->setGeometry(m_stPlayListAnimationHide);
+                        m_bPlaylistVisible = false;
+//                        // 点击位置不在播放列表内，隐藏播放列表
+//                        ui->PlaylistWid->hide();
+//                        // 恢复播放列表的父窗口和样式
+//                        ui->PlaylistWid->setParent(this);
+//                        ui->PlaylistWid->setWindowFlags(Qt::Widget);
+//                        ui->PlaylistWid->setStyleSheet("");
+//                        m_playlistHideTimer = nullptr;
+//                        // 重新将播放列表添加到分割器
+//                        if (m_splitter && m_splitter->indexOf(ui->PlaylistWid) == -1) {
+//                            m_splitter->addWidget(ui->PlaylistWid);
+//                        }
                         // 禁用点击视频隐藏功能
                         m_bClickVideoToHidePlaylist = false;
-                       // m_bPlaylistVisible=false;
+                        m_bPlaylistVisible=false;//设置隐藏标志，以便鼠标左键暂停有效abcd
                     }
                 }
                 // 防止双击导致程序卡死
                 qDebug() << "视频窗口双击事件，已放行！";
+                break;
                 //return true; // 阻止事件继续传递
             }
             case QEvent::Wheel:
@@ -1455,12 +1473,41 @@ void MainWid::OnShowMenu()
             break;
         }
     }
+
+    m_onMenu = true;
     m_stMenu.exec(cursor().pos());
 }
 
 void MainWid::OnShowAbout()
 {
-    m_stAboutWidget.move(cursor().pos().x() - m_stAboutWidget.width()/2, cursor().pos().y() - m_stAboutWidget.height()/2);
+    // 根据全屏状态设置合适的父窗口
+        QWidget *parentWid = m_bFullScreenPlay ? static_cast<QWidget*>(ui->ShowWid) : this;
+        m_stAboutWidget.setParent(parentWid, Qt::Dialog);
+        m_stAboutWidget.setWindowFlags(Qt::Dialog);
+        m_stAboutWidget.setAttribute(Qt::WA_QuitOnClose, false); // 防止误退出
+        QScreen *screen = QGuiApplication::screenAt(QCursor::pos());
+            if (!screen)
+                screen = QGuiApplication::primaryScreen();
+            QRect screenRect = screen->availableGeometry();
+
+            // 计算初始位置（鼠标居中）
+            int x = QCursor::pos().x() - m_stAboutWidget.width() / 2;
+            int y = QCursor::pos().y() - m_stAboutWidget.height() / 2;
+
+            // 水平边界修正
+            if (x < screenRect.left())
+                x = screenRect.left();
+            if (x + m_stAboutWidget.width() > screenRect.right())
+                x = screenRect.right() - m_stAboutWidget.width();
+
+            // 垂直边界修正（重点：防止底部超出屏幕）
+            if (y < screenRect.top())
+                y = screenRect.top();
+            if (y + m_stAboutWidget.height() > screenRect.bottom())
+                y = screenRect.bottom() - m_stAboutWidget.height() - (m_bFullScreenPlay ? 0: 60 );
+
+            m_stAboutWidget.move(x, y);
+            m_stAboutWidget.show();
     m_stAboutWidget.show();
 }
 
@@ -2343,7 +2390,14 @@ void MainWid::onEqualizerSettings()
         // 加载保存的设置
         loadEqualizerSettings();
     }
-
+    // 全屏时重新设置父窗口为视频窗口
+        if (m_bFullScreenPlay && m_equalizerDialog->parent() != ui->ShowWid) {
+            m_equalizerDialog->setParent(ui->ShowWid, Qt::Dialog);
+            m_equalizerDialog->setWindowFlags(Qt::Dialog);
+        } else if (!m_bFullScreenPlay && m_equalizerDialog->parent() != this) {
+            m_equalizerDialog->setParent(this, Qt::Dialog);
+            m_equalizerDialog->setWindowFlags(Qt::Dialog);
+        }
     m_equalizerDialog->show();
     m_equalizerDialog->raise();
     m_equalizerDialog->activateWindow();

@@ -165,7 +165,7 @@ private:
     bool m_bFrameStepMode = false;       // 逐帧播放模式标志
     Ui::MainWid *ui;
     bool m_bPlaying; ///< 正在播放
-
+    bool m_onMenu = false; //
     const int m_nShadowWidth; ///< 阴影宽度
 
     bool m_bFullScreenPlay; ///< 全屏播放标志
@@ -258,6 +258,7 @@ private:
                     bool isShowPlaylistOnWin =false;//窗口横式下是否显示了列表
                     QByteArray m_preFullScreenSplitterState;
                     int m_windowPlaylistFontSize = 9; // 窗口模式下播放列表字体大小
+                    QTimer* m_doubleClickTimer;   // 延迟定时器
 };
 
 #endif // MainWid_H

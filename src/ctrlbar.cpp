@@ -200,8 +200,6 @@ void CtrlBar::on_PlayOrPauseBtn_clicked()
 
 void CtrlBar::OnPauseStat(bool bPaused)
 {
-    qDebug() << "CtrlBar::OnPauseStat" << bPaused;
-
     if (bPaused)
     {
         GlobalHelper::SetIcon(ui->PlayOrPauseBtn, 12, QChar(0xf04b));
@@ -215,6 +213,7 @@ void CtrlBar::OnPauseStat(bool bPaused)
         GlobalVars::runState()=1;
     }
     emit sigInfoMessage(GlobalVars::runState()==2 ? "已暂停" : "");
+    qDebug() << "完成GlobalVars::runState():" << GlobalVars::runState();
 }
 
 void CtrlBar::OnStopFinished()
@@ -291,6 +290,18 @@ void CtrlBar::on_seekBySecond(double dSeconds)
             if (GlobalHelper::subtitleWindow()) {
                 GlobalHelper::subtitleWindow()->setSubtitleText("");
             }
+        if(GlobalVars::runState()==2){//暂停更新进度条位置
+            double targetVaue = dSeconds * MAX_SLIDER_VALUE / m_nTotalPlaySeconds;
+                if (targetVaue < 0) targetVaue = 0;
+                if (targetVaue > MAX_SLIDER_VALUE)targetVaue = MAX_SLIDER_VALUE;
+                // 立即更新进度条到目标位置
+                ui->PlaySlider->blockSignals(true);
+                ui->PlaySlider->setValue(int(targetVaue));
+                ui->PlaySlider->blockSignals(false);
+                int ndSeconds = (int)dSeconds;
+                QTime targetTime(ndSeconds / 3600, (ndSeconds % 3600) / 60, ndSeconds % 60);
+                ui->VideoPlayTimeTimeEdit->setTime(targetTime);
+        }
         QTimer::singleShot(100, this, []() {
             GlobalHelper::getIsSeeking() = 0;
         });
@@ -320,10 +331,13 @@ void CtrlBar::on_Backward5Btn_clicked()
 {
     if (GlobalVars::isVideoPlaying() && GlobalHelper::isKeyFrameSparse()){
         VideoCtl* vctl = VideoCtl::GetInstance();
-        double currentSec = vctl->get_master_clock(vctl->m_CurStream);
-        if (!std::isnan(currentSec))currentSec = m_nSeconds;
+        double currentSec =m_nSeconds;//vctl->get_master_clock(vctl->m_CurStream);
+        //if (std::isnan(currentSec))currentSec = m_nSeconds;
+        qDebug() << " 快退，跳转到了 ：currentSec : "<< currentSec <<" m_nSeconds====" <<m_nSeconds;
         if (vctl->isKeyframeIndexReady()){
             double nextKey = vctl->getPreKeyframe(currentSec);
+            m_nSeconds=nextKey;
+            qDebug() << " 快退，跳转到了 ：currentSec : "<< currentSec << "nextKey :" << nextKey;
             emit sigInfoMessage(QString("快退(关键帧): %1秒").arg(QString::number((currentSec-nextKey), 'f', 1)));
             on_seekBySecond(nextKey);
             m_nSeconds=nextKey;

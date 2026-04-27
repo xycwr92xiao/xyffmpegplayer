@@ -162,6 +162,15 @@ Show::Show(QWidget *parent) :
             m_pInfoTimer = new QTimer(this);
             m_pInfoTimer->setSingleShot(true);
             connect(m_pInfoTimer, &QTimer::timeout, this, &Show::onInfoTimerTimeout);
+            m_pClickTimer = new QTimer(this);
+            m_pClickTimer->setSingleShot(true);
+            connect(m_pClickTimer, &QTimer::timeout, this, [this](){
+                if (m_isPause) {
+                    emit SigPlayOrPause();
+                    m_isPause = false;
+                    m_pClickTimer->stop();
+                }
+            });
 }
 
 Show::~Show()
@@ -405,6 +414,7 @@ void Show::mousePressEvent(QMouseEvent *event)
     }
     else if (event->buttons() & Qt::LeftButton)
         {
+        m_isPause = true;
         // 检查是否点击在音频信息文本区域（包括边框）内
              if (m_pAudioInfoWidget && m_pAudioInfoWidget->isVisible()) {
                  QPoint labelTopLeft = m_pAudioInfoLabel->mapTo(this, QPoint(0, 0));
@@ -439,6 +449,12 @@ void Show::mousePressEvent(QMouseEvent *event)
 }
 void Show::mouseReleaseEvent(QMouseEvent *event)
 {
+    if (m_isPause) {
+            m_isPause = true;
+            m_pClickTimer->start(300);  // 200ms 等待双击
+            // 其他代码...
+        return;
+    }
     if (m_bDrag)
     {
         m_bDrag = false;
@@ -452,7 +468,11 @@ void Show::mouseReleaseEvent(QMouseEvent *event)
 
 void Show::mouseMoveEvent(QMouseEvent *event)
 {
-    if (m_bDrag && (event->buttons() & Qt::LeftButton))
+    if (m_pClickTimer->isActive()) {
+        m_pClickTimer->stop();
+    }
+    m_isPause = false;
+    if (m_bDrag && (event->buttons() & Qt::LeftButton) && !GlobalVars::getFullScreen())
         {
             QWidget* mainWindow = this->window();
             if (mainWindow)
@@ -481,8 +501,11 @@ void Show::mouseDoubleClickEvent(QMouseEvent *event)
     //Q_UNUSED(event);
     m_bDrag = false;
     setCursor(Qt::ArrowCursor);
+    if (m_pClickTimer->isActive()) {
+        m_pClickTimer->stop();
+    }
+    m_isPause = false;
     SigFullScreen();
-    //qDebug() << "双击了视频窗口，------------------";
     //emit SigFullScreen();  // 发射全屏信号
     //QWidget::mouseDoubleClickEvent(event);
 }
