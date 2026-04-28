@@ -815,28 +815,36 @@ void Playlist::PlayByIndex(int nIndex)
                         QFileInfo fileInfo(filePath);
                         if (!fileInfo.exists()) {
                             m_passwordDialogActive=true;
-                            QMessageBox::warning(this,
-                                tr("文件不存在"),
-                                tr("文件 '%1' 不存在或已被删除。\n\n"
-                                   "已从播放列表中移除该文件。").arg(fileInfo.fileName()));
+                            QString message;
+                            if (filePath.startsWith("//")) {
+                                // 网络路径（如 //server/share）
+                                message = tr("网络连接被移除，从播放列表中移除 '%1'？").arg(fileInfo.fileName());
+                            } else if (filePath.contains(QRegularExpression("^[a-zA-Z]:"))) {
+                                // 本地磁盘路径（如 C:、D:）
+                                message = tr("文件不存在，从播放列表中移除 '%1'？").arg(fileInfo.fileName());
+                            } else {
+                                // 其他情况（相对路径、未知协议等）
+                                message = tr("文件不存在，从播放列表中移除 '%1'？").arg(fileInfo.fileName());
+                            }
+                            int reply = QMessageBox::question(this,
+                                tr("是否移除文件"),
+                                message,
+                                QMessageBox::Yes | QMessageBox::No);
+                            if (reply == QMessageBox::Yes) {
                             // 从播放列表中移除
                             ui->List->takeItem(nIndex);
-
                             // 从数据映射中移除
                             if (m_itemData.contains(filePath)) {
                                 m_itemData.remove(filePath);
                             }
-
                             // 更新播放列表计数
                             GlobalVars::playlistCount() = ui->List->count();
-
                             // 更新按钮状态
                             updateButtonStates();
-
                             // 保存更改
                             saveAllData();
-
                             qDebug() << "文件不存在，已从播放列表移除：" << filePath;
+                            }
                             return;
                         }
                         // 确保只有一个选中项
