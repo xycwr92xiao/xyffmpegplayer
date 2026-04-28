@@ -761,7 +761,7 @@ void Playlist::OnBackwardPlay()
                 on_List_itemDoubleClicked(pItem);
                 ui->List->setCurrentRow(m_nCurrentPlayListIndex);
             }
-        }
+        }else SigSendShowInfo("已到第一个");
 }
 
 void Playlist::OnForwardPlay()
@@ -777,7 +777,7 @@ void Playlist::OnForwardPlay()
                 on_List_itemDoubleClicked(pItem);
                 ui->List->setCurrentRow(m_nCurrentPlayListIndex);
             }
-        }
+        }else SigSendShowInfo("已到最后一个");
 }
 
 void Playlist::dropEvent(QDropEvent *event)

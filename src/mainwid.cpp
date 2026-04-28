@@ -315,7 +315,7 @@ bool MainWid::ConnectSignalSlots()
     connect(&m_stPlaylist, &Playlist::SigPlay, ui->ShowWid, &Show::SigPlay);
     connect(&m_stPlaylist, &Playlist::SigSaveSubtitleFile, ui->ShowWid, &Show::OnLyricDownloaded);
     connect(&m_stPlaylist, &Playlist::SigStop, VideoCtl::GetInstance(), &VideoCtl::OnStop);
-
+    connect(&m_stPlaylist, &Playlist::SigSendShowInfo, ui->ShowWid, &Show::showInfo);
     // 连接信号
     //connect(ui->ShowWid, &Show::SigOpenFile, &m_stPlaylist, &Playlist::OnAddFileAndPlay);
     connect(ui->ShowWid, &Show::SigAddFilesAndPlay, &m_stPlaylist, &Playlist::appToIndexAndPlay);

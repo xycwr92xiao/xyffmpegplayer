@@ -126,6 +126,7 @@ signals:
         void SigSetPlayPosition(qint64 position); // 设置播放位置
         void SigPlaylistChanged();
         void SigSaveSubtitleFile(const QString& lrcPath);
+        void SigSendShowInfo(const QString& text,int x=10,int y=8);
 private:
     bool InitUi();
     bool ConnectSignalSlots();
