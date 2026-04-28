@@ -559,3 +559,10 @@ void CtrlBar::toggleMute()
     on_VolumeBtn_clicked();
     ui->speedBtn->setText("静音");
 }
+void CtrlBar::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    if(event->button() == Qt::LeftButton)
+    {
+        emit SigDoubleClicked();
+    }
+}

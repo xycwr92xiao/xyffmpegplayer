@@ -87,6 +87,14 @@ Title::Title(QWidget *parent) :
             for (QPushButton* button : buttons) {
                 button->setFocusPolicy(Qt::NoFocus);
             }
+            // 新增：初始化系统时间定时器
+                m_pTimeTimer = new QTimer(this);
+                connect(m_pTimeTimer, &QTimer::timeout, this, &Title::updateSystemTime);
+                m_pTimeTimer->setInterval(1000);  // 每秒更新一次
+
+                // 默认窗口模式下隐藏时间标签（不占位置）
+                ui->SysTime->setVisible(false);
+                ui->gridLayout->setColumnMinimumWidth(2, 0);
 }
 
 Title::~Title()
@@ -204,3 +212,32 @@ void Title::OnStopFinished()
     ui->MovieNameLab->clear();
 }
 
+void Title::updateSystemTime()
+{
+    QDateTime current = QDateTime::currentDateTime();
+    ui->SysTime->setText(current.toString("hh:mm:ss"));
+}
+
+void Title::setFullScreenMode(bool fullScreen)
+{
+    if (fullScreen)
+    {
+        // 全屏模式：显示系统时间，启动定时器
+        ui->SysTime->setVisible(true);
+        // 设置两列拉伸因子相等，实现各占一半
+        ui->gridLayout->setColumnStretch(1, 1);   // MovieNameLab
+        ui->gridLayout->setColumnStretch(2, 1);   // SysTime
+        if (!m_pTimeTimer->isActive())
+        {
+            m_pTimeTimer->start();
+            updateSystemTime();  // 立即显示当前时间
+        }
+    }
+    else
+    {
+        // 窗口模式：隐藏系统时间，停止定时器
+        ui->SysTime->setVisible(false);
+        if (m_pTimeTimer->isActive())
+            m_pTimeTimer->stop();
+    }
+}

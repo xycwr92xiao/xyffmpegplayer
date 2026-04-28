@@ -336,6 +336,7 @@ bool MainWid::ConnectSignalSlots()
     connect(ui->CtrlBarWid, &CtrlBar::SigPlayVolume, VideoCtl::GetInstance(), &VideoCtl::OnPlayVolume);
     connect(ui->CtrlBarWid, &CtrlBar::SigPlayOrPause, VideoCtl::GetInstance(), &VideoCtl::OnPause);
     connect(ui->CtrlBarWid, &CtrlBar::sigInfoMessage, ui->ShowWid, &Show::showInfo);
+    connect(ui->CtrlBarWid, &CtrlBar::SigDoubleClicked, this, &MainWid::OnShowTime);
 //    connect(ui->CtrlBarWid, &CtrlBar::SigStop, VideoCtl::GetInstance(), &VideoCtl::OnStop);
 
     connect(ui->CtrlBarWid, &CtrlBar::SigFullScreenBtn, this, &MainWid::OnFullScreenPlay);
@@ -662,7 +663,7 @@ bool MainWid::eventFilter(QObject *watched, QEvent *event)
             {
                 optionBz = 1;
                 if (mouseEvent->button() == Qt::LeftButton) {
-                     changeCtrlTileShow();   //切换显示与隐藏
+                      changeCtrlTileShow();   //切换显示与隐藏
                       bool isMenuVisible = m_onMenu;
                       m_onMenu = false;
                      if (m_bFullScreenPlay && !m_bPlaylistVisible && !isMenuVisible) {
@@ -675,10 +676,13 @@ bool MainWid::eventFilter(QObject *watched, QEvent *event)
                 // 记录鼠标位置
                 m_lastMousePos = mouseEvent->globalPos();
                 // 如果点击视频区域且播放列表可见，隐藏播放列表
-                if (m_bPlaylistVisible && m_bClickVideoToHidePlaylist)
+                bool isPlaylistVisible = ui->PlaylistWid->x()<m_stPlayListAnimationHide.x();
+                if (isPlaylistVisible && m_bClickVideoToHidePlaylist)
                 {
                     qDebug() << " 准备隐藏播放列表" ;
-                    showFullscreenPlaylist(false);
+                    ui->PlaylistWid->setGeometry(m_stPlayListAnimationHide);
+                    m_bPlaylistVisible=false;//设置隐藏标志，以便鼠标左键暂停有效abcd
+                    //m_bClickVideoToHidePlaylist = false;
                     return true;
                 }
                 break;
@@ -703,7 +707,8 @@ bool MainWid::eventFilter(QObject *watched, QEvent *event)
                     {
                         //showFullscreenPlaylist(false);
                         ui->PlaylistWid->setGeometry(m_stPlayListAnimationHide);
-                        m_bPlaylistVisible = false;
+                        m_bPlaylistVisible=false;//设置隐藏标志，以便鼠标左键暂停有效abcd
+                        //m_bClickVideoToHidePlaylist = false;
 //                        // 点击位置不在播放列表内，隐藏播放列表
 //                        ui->PlaylistWid->hide();
 //                        // 恢复播放列表的父窗口和样式
@@ -716,8 +721,6 @@ bool MainWid::eventFilter(QObject *watched, QEvent *event)
 //                            m_splitter->addWidget(ui->PlaylistWid);
 //                        }
                         // 禁用点击视频隐藏功能
-                        m_bClickVideoToHidePlaylist = false;
-                        m_bPlaylistVisible=false;//设置隐藏标志，以便鼠标左键暂停有效abcd
                     }
                 }
                 // 防止双击导致程序卡死
@@ -949,7 +952,7 @@ void MainWid::OnFullScreenPlay()
         m_preFullScreenPos = this->pos();
         m_preFullScreenVideoSize = ui->ShowWid->size();
         m_bIsFullScreen = true;
-
+        m_stTitle.setFullScreenMode(true);
         GlobalVars::getFullScreen()=true;
         GlobalVars::getWinState() = 4;
         m_bFullScreenPlay = true;
@@ -1414,6 +1417,7 @@ void MainWid::OnFullScreenPlay()
         GlobalVars::getWinState() = 0;
         m_bFullScreenPlay = false;
         m_bIsFullScreen = false;
+        m_stTitle.setFullScreenMode(false);
         ui->ShowWid->showInfo("全屏:OFF",10,10);
     }
     if (ui->ShowWid) {
@@ -2152,7 +2156,12 @@ void MainWid::OnShowOrHidePlaylist()
     ui->ShowWid->showInfo(m_bPlaylistVisible ? "播放列表：显示" :"播放列表：隐藏");
     this->update();
 }
-
+void MainWid::OnShowTime()
+{
+    // 获取当前时间并格式化
+    QString currentTime = QTime::currentTime().toString("hh:mm:ss");
+    ui->ShowWid->showInfo(currentTime);
+}
 // 正常窗口状态显示/隐藏播放列表
 void MainWid::showPlaylistNormal(bool show)
 {
@@ -2496,7 +2505,7 @@ void MainWid::changeCtrlTileShow(){
                 m_stTitlebarAnimationHide->start();
                 m_bFullscreenCtrlBarShow = false;
             }
-            qDebug()<< "标题栏位置:" << ui->TitleWid->geometry();
+
       }
 }
 // 更新鼠标活动时间
@@ -2521,16 +2530,16 @@ void MainWid::CheckMouseActivity()
 
     qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
     qint64 inactiveTime = currentTime - m_lastMouseActivityTime;
-    qDebug() << "无操作4秒开始隐藏标题栏和控制栏…………现在空闲时间：……" << inactiveTime;
+    //qDebug() << "无操作4秒开始隐藏标题栏和控制栏…………现在空闲时间：……" << inactiveTime;
     // 3秒无活动：隐藏控制栏和标题栏
     if (inactiveTime > 4000 && m_bFullscreenCtrlBarShow) {
-        qDebug() << "无操作3秒开始隐藏标题栏和控制栏………………" ;
+        //qDebug() << "无操作3秒开始隐藏标题栏和控制栏………………" ;
         HideFullscreenControls();
     }
 
     // 5秒无活动：隐藏鼠标指针
     if (inactiveTime > 6000 && !m_bMouseCursorHidden) {
-        qDebug() << "无操作5秒开始隐藏鼠标指针………………" ;
+        //qDebug() << "无操作5秒开始隐藏鼠标指针………………" ;
         HideMouseCursor();
     }
 }
@@ -2598,11 +2607,15 @@ void MainWid::changeEvent(QEvent *event)
     }
     if (m_bFullScreenPlay && GlobalVars::getWinState() >=2 ){
      if (event->type() == QEvent::ActivationChange){
-qDebug() << "全屏最小化恢复全屏,定时器" <<  GlobalHelper::subtitleWindow()->m_updateTimer.isActive() << "字幕窗口：" << GlobalHelper::subtitleWindow()->isVisible();
+qDebug() << "2最小化恢复全屏,定时器激活状态：" <<  GlobalHelper::subtitleWindow()->m_updateTimer.isActive() << "字幕窗口：" << GlobalHelper::subtitleWindow()->isVisible();
           ui->PlaylistWid->setGeometry(m_stPlayListAnimationHide);
-
+          //需要显示
+          qDebug() << "3最小化恢复到全屏，ui->TitleWid->y()" << ui->TitleWid->y();
+          m_bFullscreenCtrlBarShow = false;
+          UpdateMouseActivity();
+          m_bPlaylistVisible = false;
      }else if (event->type() == QEvent::WindowStateChange){
-         qDebug() << "全屏到最小化，定时器" <<  GlobalHelper::subtitleWindow()->m_updateTimer.isActive() << "字幕窗口：" << GlobalHelper::subtitleWindow()->isVisible();
+         qDebug() << "1全屏到最小化，定时器" <<  GlobalHelper::subtitleWindow()->m_updateTimer.isActive() << "字幕窗口：" << GlobalHelper::subtitleWindow()->isVisible();
          GlobalVars::getWinState()= 3;
      }
     }
@@ -2621,6 +2634,7 @@ void MainWid::OnMouseActivityCheckTimeOut()
             if (m_stPlayListAnimationHide.contains(cursor().pos()))
             {
                 showFullscreenPlaylist(true);
+                //qDebug() << "显示中－－－－－－－－－－－－－－－1-ui->TitleWid->y():" << ui->TitleWid->y() << "cursor().pos():" << cursor().pos();
             }
             //判断鼠标是否在控制面板上面
             if (moveDistance > 3 || ui->TitleWid->geometry().contains(cursor().pos()) || m_bPlaylistVisible)
@@ -2629,7 +2643,7 @@ void MainWid::OnMouseActivityCheckTimeOut()
                 m_bFullscreenCtrlBarShow = true;
             }
             else
-            {   qDebug() << "显示中－－－－－－－－－－－－－－－1-m_lastMousePos:" << m_lastMousePos << "cursor().pos():" << cursor().pos();
+            {   //qDebug() << "显示中－－－－－－－－－－－－－－－1-m_lastMousePos:" << m_lastMousePos << "cursor().pos():" << cursor().pos();
                 //需要显示
                 if (ui->TitleWid->y()<0){
                 ui->CtrlBarWid->raise();
@@ -2639,6 +2653,7 @@ void MainWid::OnMouseActivityCheckTimeOut()
                 m_stCtrlbarAnimationHide->stop();
                 m_stTitlebarAnimationHide->stop();
                 stCtrlBarHideTimer.stop();
+                m_bFullscreenCtrlBarShow = true;
                 }
             }
     }else  if (m_stCtrlBarAnimationShow.contains(cursor().pos()))
@@ -2661,6 +2676,7 @@ void MainWid::OnMouseActivityCheckTimeOut()
                 m_stCtrlbarAnimationHide->stop();
                 m_stTitlebarAnimationHide->stop();
                 stCtrlBarHideTimer.stop();
+                m_bFullscreenCtrlBarShow = true;
             }
         }
 
@@ -2744,9 +2760,6 @@ void MainWid::adjustWindowToVideoSize()
 
         qDebug() << "缩放后尺寸:" << requiredWidth << "x" << requiredHeight;
     }
-
-    // 保存当前窗口位置，用于居中
-    QPoint currentPos = this->pos();
 
     // 调整窗口大小
     this->resize(requiredWidth, requiredHeight);

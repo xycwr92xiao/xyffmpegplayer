@@ -86,7 +86,7 @@ private:
     void OnAlwaysOnTopBtnClicked();
     //显示、隐藏播放列表
     void OnShowOrHidePlaylist();
-
+    void OnShowTime();
     void CreateDefaultMenu();
 
     /**

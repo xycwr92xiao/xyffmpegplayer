@@ -10,7 +10,8 @@
  */
 #ifndef MAINWIDTITLE_H
 #define MAINWIDTITLE_H
-
+#include <QTimer>
+#include <QDateTime>
 #include <QWidget>
 #include <QMouseEvent>
 #include <QMenu>
@@ -57,6 +58,7 @@ public:
     void OnChangeMaxBtnStyle(bool bIfMax);
     void OnPlay(QString strMovieName);
     void OnStopFinished();
+    void setFullScreenMode(bool fullScreen);
 signals:
     void SigCloseBtnClicked();	//< 点击关闭按钮
     void SigAlwaysOnTopBtnClicked();
@@ -68,6 +70,8 @@ signals:
 
     void SigOpenFile(QString strFileName); //打开文件
     void SigShowMenu();
+private slots:
+    void updateSystemTime();  // 更新时间显示
 private:
     Ui::Title *ui;
 
@@ -75,7 +79,7 @@ private:
 
     QMenu m_stMenu;
     QActionGroup m_stActionGroup;
-
+    QTimer* m_pTimeTimer;     // 系统时间更新定时器
     About about;
 };
 
