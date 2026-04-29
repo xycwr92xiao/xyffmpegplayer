@@ -519,7 +519,7 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
     {
     case Qt::Key_Escape:
         if (m_bFullScreenPlay){
-            emit SigPlayOrPause();
+            if(GlobalVars::runState()==1)emit SigPlayOrPause();
             OnFullScreenPlay();
             OnMinBtnClicked();
         }
@@ -602,6 +602,7 @@ void MainWid::mouseMoveEvent(QMouseEvent *event)
             if (ui->ShowWid) {
                 // 调用Show类的更新函数
                 ui->ShowWid->updateSubtitleWindowPosition();
+                ui->ShowWid->updateInfoWindowPosition();
             }
         }
         // 如果正在调整大小，不处理移动窗口

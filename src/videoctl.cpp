@@ -675,7 +675,7 @@ retry:
                 duration = vp_duration(is, vp, nextvp);
                 if (!is->step && (framedrop>0 || (framedrop && get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER)) && time > is->frame_timer + duration) {
                     is->frame_drops_late++;
-                     qDebug() << "frame_drops_late  " << is->frame_drops_late;
+                     //qDebug() << "frame_drops_late  " << is->frame_drops_late;
                     frame_queue_next(&is->pictq);
                     goto retry;
                 }
@@ -2193,6 +2193,35 @@ void VideoCtl::onSetPlayPosition(double toPostion)
           m_pendingSeekPosition = toPostion;
           m_seekRetryTimer->start();
 }
+QString formatCustomTime(qint64 pos)
+{
+    // 1. 统一转换为总秒数（兼容毫秒/秒输入）
+    qint64 totalSeconds = pos;
+
+    // 2. 计算时分秒
+    int hours = totalSeconds / 3600;
+    int remaining = totalSeconds % 3600;
+    int minutes = remaining / 60;
+    int seconds = remaining % 60;
+
+    // 3. 严格按照你的规则格式化
+    if (hours > 0) {
+        // 规则：小时>0 → 不补0，格式 h:mm:ss
+        return QString("%1:%2:%3")
+            .arg(hours)
+            .arg(minutes, 2, 10, QChar('0'))
+            .arg(seconds, 2, 10, QChar('0'));
+    } else if (minutes > 0) {
+        // 规则：小时=0，分钟>0 → 不补0，格式 m:ss
+        return QString("%1分%2秒")
+            .arg(minutes)
+            .arg(seconds);
+    } else {
+        // 规则：小时=0，分钟=0 → 只显示秒，不补0
+        return QString::number(seconds)+"秒";
+    }
+}
+
 void VideoCtl::doSetPlayPosition(double toPostion)
 {
     if (m_CurStream == nullptr) {
@@ -2205,7 +2234,7 @@ void VideoCtl::doSetPlayPosition(double toPostion)
     if (m_CurStream->ic->start_time != AV_NOPTS_VALUE && pos < m_CurStream->ic->start_time / (double)AV_TIME_BASE)
         pos = m_CurStream->ic->start_time / (double)AV_TIME_BASE;
     stream_seek(m_CurStream, (int64_t)(pos * AV_TIME_BASE),0);
-
+    sigInfoMessage(QString("跳转到上次播放位置: %1").arg(formatCustomTime(pos)));
 }
 
 void VideoCtl::UpdateVolume(int sign, double step)

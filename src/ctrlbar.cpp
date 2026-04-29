@@ -117,6 +117,7 @@ void CtrlBar::UpdatePlayModeButton()
 
     GlobalHelper::SetIcon(ui->PlayModeBtn, 12, iconChar);
     ui->PlayModeBtn->setToolTip(tooltip);
+    emit sigInfoMessage(tooltip);
 }
 bool CtrlBar::ConnectSignalSlots()
 {
@@ -231,7 +232,7 @@ void CtrlBar::OnSpeed(float speed)
 {
     // 更新倍速按钮文本
             ui->speedBtn->setText(QString("倍速:%1x").arg(speed, 0, 'f', 2));
-
+            emit sigInfoMessage(QString("倍速:%1x").arg(speed, 0, 'f', 2));
             // 更新菜单选中状态
             for (QAction* action : m_speedMenu->actions()) {
                 float menuSpeed = action->data().toFloat();
@@ -403,6 +404,7 @@ void CtrlBar::OnPlaySliderValueChanged()
 {
     double dPercent = ui->PlaySlider->value()*1.0 / ui->PlaySlider->maximum();
     int targetSeconds = dPercent * m_nTotalPlaySeconds;
+    GlobalVars::currentPlaytime() = dPercent * m_nTotalPlaySeconds;
         // 更新当前时间显示
     QTime targetTime(targetSeconds / 3600, (targetSeconds % 3600) / 60, targetSeconds % 60);
     ui->VideoPlayTimeTimeEdit->setTime(targetTime);

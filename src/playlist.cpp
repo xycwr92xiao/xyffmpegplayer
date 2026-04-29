@@ -1192,6 +1192,7 @@ void Playlist::saveAllData()
     configData["playlistCount"] = ui->List->count();
     configData["autoPlay"] = GlobalHelper::GetAutoPlay();
     configData["currentPosition"] = GlobalVars::currentPlaytime();
+    qDebug() << "保存播放位置：" << GlobalVars::currentPlaytime();
     // 3. 保存到统一的 JSON 文件
     QJsonDocument doc(configData);
     QByteArray jsonData = doc.toJson();
@@ -2192,6 +2193,12 @@ void Playlist::loadPlaylistFromFile(const QString &filePath)
             GlobalVars::selectedIndex() = savedIndex;
             m_nCurrentPlayListIndex = savedIndex;
             GlobalVars::currentPlayIndex() = savedIndex;
+//
+            if (configData.contains("currentPosition")) {
+                m_lastPlayPosition = configData["currentPosition"].toDouble();
+                GlobalVars::currentPlaytime() = m_lastPlayPosition;  //
+            }
+            //
         }
     }else {
         // 如果没有保存的索引，重置为-1
