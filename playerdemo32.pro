@@ -62,6 +62,7 @@ HEADERS += src/customthread.h \
     src/globalhelper.h \
     src/globalvars.h \
     src/lyricsearch.h \
+    src/screensavercontroller.h \
     src/settingwid.h \
     src/about.h \
     src/CustomSlider.h \
@@ -84,6 +85,7 @@ SOURCES += src/main.cpp \
     src/equalizerdialog.cpp \
     src/globalhelper.cpp \
     src/lyricsearch.cpp \
+    src/screensavercontroller.cpp \
     src/settingwid.cpp \
     src/simplemessagebox.cpp \
     src/subtitle.cpp \
