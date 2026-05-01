@@ -21,6 +21,7 @@
 #include "globalhelper.h"
 #include "datactl.h"
 #include "sonic.h"
+#include "screensavercontroller.h"
 
 #define FFP_PROP_FLOAT_PLAYBACK_RATE                    10003       // 设置播放速率
 #define FFP_PROP_FLOAT_PLAYBACK_VOLUME                  10006

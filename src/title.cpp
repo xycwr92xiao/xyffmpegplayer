@@ -237,6 +237,8 @@ void Title::setFullScreenMode(bool fullScreen)
     {
         // 窗口模式：隐藏系统时间，停止定时器
         ui->SysTime->setVisible(false);
+        ui->gridLayout->setColumnStretch(2, 0);
+        ui->gridLayout->setColumnMinimumWidth(2, 0);
         if (m_pTimeTimer->isActive())
             m_pTimeTimer->stop();
     }

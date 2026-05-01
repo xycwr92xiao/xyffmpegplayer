@@ -83,6 +83,7 @@ bool CtrlBar::Init()
     }
     ui->PlaySlider->setObjectName("PlaySlider");
     ui->VolumeSlider->setObjectName("VolumeSlider");
+    ScreenSaverController::instance().inhibit();// 播放时，禁用屏保和睡眠
     return true;
 
 }
@@ -206,12 +207,14 @@ void CtrlBar::OnPauseStat(bool bPaused)
         GlobalHelper::SetIcon(ui->PlayOrPauseBtn, 12, QChar(0xf04b));
         ui->PlayOrPauseBtn->setToolTip("播放");
         GlobalVars::runState()=2;
+        ScreenSaverController::instance().restore();// 暂停时，恢复屏保和睡眠
     }
     else
     {
         GlobalHelper::SetIcon(ui->PlayOrPauseBtn, 12, QChar(0xf04c));
         ui->PlayOrPauseBtn->setToolTip("暂停");
         GlobalVars::runState()=1;
+        if(GlobalVars::isVideoPlaying()) ScreenSaverController::instance().inhibit();// 播放时，禁用屏保和睡眠
     }
     emit sigInfoMessage(GlobalVars::runState()==2 ? "已暂停" : "");
     qDebug() << "完成GlobalVars::runState():" << GlobalVars::runState();
@@ -409,6 +412,7 @@ void CtrlBar::OnPlaySliderValueChanged()
     QTime targetTime(targetSeconds / 3600, (targetSeconds % 3600) / 60, targetSeconds % 60);
     ui->VideoPlayTimeTimeEdit->setTime(targetTime);
     emit SigPlaySeek(dPercent);
+    emit sigInfoMessage(QString("跳转到了: %1").arg(GlobalVars::formatCustomTime(targetSeconds)));
     qDebug() << " 跳转到了 ："<< targetTime << "GlobalHelper::getIsSeeking()--" << GlobalHelper::getIsSeeking();
     // 通过全局变量清除字幕
         if (GlobalHelper::subtitleWindow()) {

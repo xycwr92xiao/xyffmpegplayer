@@ -2106,7 +2106,7 @@ void Playlist::switchToPlaylist(const QString &listName, const QString &jsonPath
            // 使用单次定时器延迟播放，确保UI已更新
            QTimer::singleShot(100, this, [this, savedIndex]() {
                PlayByIndex(savedIndex);
-qDebug() << "自动跳转6 --------m_lastPlayPosition----:" << m_lastPlayPosition << "GlobalVars::currentPlaytime()="<<GlobalVars::currentPlaytime();
+qDebug() << "自动跳转到上次播放位置 --------" << "GlobalVars::currentPlaytime()="<<GlobalVars::currentPlaytime();
                if (m_lastPlayPosition > 0) {
                        QTimer::singleShot(80, this, [this]() {
                            emit SigSetPlayPosition(m_lastPlayPosition);

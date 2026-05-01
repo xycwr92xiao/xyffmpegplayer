@@ -182,7 +182,34 @@ public:
             if(dirType ==0 )settings.setValue("LastOpenDir", dir);
             else settings.setValue("LastCoverDir", dir);
         }
+        static QString formatCustomTime(qint64 pos)
+        {
+            // 1. 统一转换为总秒数（兼容毫秒/秒输入）
+            qint64 totalSeconds = pos;
 
+            // 2. 计算时分秒
+            int hours = totalSeconds / 3600;
+            int remaining = totalSeconds % 3600;
+            int minutes = remaining / 60;
+            int seconds = remaining % 60;
+
+            // 3. 严格按照你的规则格式化
+            if (hours > 0) {
+                // 规则：小时>0 → 不补0，格式 h:mm:ss
+                return QString("%1:%2:%3")
+                    .arg(hours)
+                    .arg(minutes, 2, 10, QChar('0'))
+                    .arg(seconds, 2, 10, QChar('0'));
+            } else if (minutes > 0) {
+                // 规则：小时=0，分钟>0 → 不补0，格式 m:ss
+                return QString("%1分%2秒")
+                    .arg(minutes)
+                    .arg(seconds);
+            } else {
+                // 规则：小时=0，分钟=0 → 只显示秒，不补0
+                return QString::number(seconds)+"秒";
+            }
+        }
 };
 
 #endif // GLOBALVARS_H

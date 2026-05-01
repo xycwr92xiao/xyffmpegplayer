@@ -560,6 +560,8 @@ void MainWid::keyReleaseEvent(QKeyEvent *event)
         emit SigSubVolume();
         break;
     case Qt::Key_Space://暂停
+    case Qt::Key_P://暂停
+    case Qt::Key_Pause://暂停
         emit SigPlayOrPause();
         break;
 
@@ -667,6 +669,8 @@ bool MainWid::eventFilter(QObject *watched, QEvent *event)
                       changeCtrlTileShow();   //切换显示与隐藏
                       bool isMenuVisible = m_onMenu;
                       m_onMenu = false;
+                      m_bPlaylistVisible = (ui->PlaylistWid->x() < m_stPlayListAnimationHide.x());
+                      qDebug() << "11111！ ui->PlaylistWid->x() = "<< ui->PlaylistWid->x() << "m_stPlayListAnimationHide.x()==" << m_stPlayListAnimationHide.x() << "ui->PlaylistWid->width()" << ui->PlaylistWid->width();
                      if (m_bFullScreenPlay && !m_bPlaylistVisible && !isMenuVisible) {
                                      m_doubleClickTimer->start(300);
                      }
@@ -678,10 +682,15 @@ bool MainWid::eventFilter(QObject *watched, QEvent *event)
                 m_lastMousePos = mouseEvent->globalPos();
                 // 如果点击视频区域且播放列表可见，隐藏播放列表
                 bool isPlaylistVisible = ui->PlaylistWid->x()<m_stPlayListAnimationHide.x();
+                QRect playlistRect = ui->PlaylistWid->geometry();
+                m_bClickVideoToHidePlaylist = !playlistRect.contains(mouseEvent->globalPos());
+                qDebug() << "22222！ ui->PlaylistWid->x() = "<< ui->PlaylistWid->x() << "m_stPlayListAnimationHide.x()==" << m_stPlayListAnimationHide.x() <<"m_bClickVideoToHidePlaylist=" <<m_bClickVideoToHidePlaylist;
                 if (isPlaylistVisible && m_bClickVideoToHidePlaylist)
                 {
                     qDebug() << " 准备隐藏播放列表" ;
+                    m_stPlaylistAnimationShow->stop();
                     ui->PlaylistWid->setGeometry(m_stPlayListAnimationHide);
+                    ui->PlaylistWid->raise();
                     m_bPlaylistVisible=false;//设置隐藏标志，以便鼠标左键暂停有效abcd
                     //m_bClickVideoToHidePlaylist = false;
                     return true;
@@ -707,7 +716,9 @@ bool MainWid::eventFilter(QObject *watched, QEvent *event)
                     if (!playlistRect.contains(mouseEvent->globalPos()))
                     {
                         //showFullscreenPlaylist(false);
+                        m_stPlaylistAnimationShow->stop();
                         ui->PlaylistWid->setGeometry(m_stPlayListAnimationHide);
+                        ui->PlaylistWid->raise();
                         m_bPlaylistVisible=false;//设置隐藏标志，以便鼠标左键暂停有效abcd
                         //m_bClickVideoToHidePlaylist = false;
 //                        // 点击位置不在播放列表内，隐藏播放列表
@@ -1021,9 +1032,8 @@ void MainWid::OnFullScreenPlay()
         ui->PlaylistWid->setWindowOpacity(0.85);
         ui->PlaylistWid->showNormal();
         ui->PlaylistWid->windowHandle()->setScreen(pStCurScreen);
-
-        ui->PlaylistWid->setGeometry(stScreenRect.width(), nTitleBarHeight,
-                                   nPlaylistWidth, nPlayListHeight);
+        ui->PlaylistWid->setGeometry(m_stPlayListAnimationHide);
+        ui->PlaylistWid->show();
         // 全屏时设置播放列表样式和行高
                 QString playlistStyle =
                         "QDockWidget {"  // 修改：设置整个DockWidget的样式
@@ -1275,6 +1285,7 @@ void MainWid::OnFullScreenPlay()
                 m_lastMousePos = QPoint(-1, -1); // 重置最后鼠标位置
                 m_stFullscreenMouseDetectTimer.start();
               ui->ShowWid->showInfo("全屏:开",10,10);
+             if(GlobalVars::runState()==1) ScreenSaverController::instance().inhibit();
     }
     else
     {
@@ -1420,6 +1431,7 @@ void MainWid::OnFullScreenPlay()
         m_bIsFullScreen = false;
         m_stTitle.setFullScreenMode(false);
         ui->ShowWid->showInfo("全屏:OFF",10,10);
+        if(!GlobalVars::isVideoPlaying())ScreenSaverController::instance().restore();//
     }
     if (ui->ShowWid) {
         ui->ShowWid->updateSubtitleWindowPosition();
