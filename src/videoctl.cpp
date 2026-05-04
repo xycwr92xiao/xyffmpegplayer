@@ -2365,7 +2365,7 @@ void VideoCtl::OnPause()
     }
     SetFrameStepMode(false);
     //qDebug() << "目前的播放状态-------------->：" << GlobalVars::runState();
-    if (GlobalVars::runState() == 1){
+    if (GlobalVars::runState() == 1 && m_CurStream->audio_volume>0){
         runFadeProc(0);
     }else {
 

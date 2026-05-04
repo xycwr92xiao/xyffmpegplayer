@@ -84,7 +84,7 @@ private slots:
 
 signals:
     void SigShowOrHidePlaylist();	//< 显示或隐藏信号
-    void SigPlaySeek(double dPercent); ///< 调整播放进度
+    void SigPlaySeek(double dPercent); //< 调整播放进度
     void SigPlayVolume(double dPercent);
     void SigPlayOrPause();
 //    void SigStop();
