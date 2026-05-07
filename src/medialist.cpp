@@ -211,7 +211,7 @@ void MediaList::AddFolder()
 
     QPushButton *currentFolderButton = msgBox.addButton("仅当前文件夹", QMessageBox::ActionRole);
     QPushButton *allSubfoldersButton = msgBox.addButton("包括子文件夹", QMessageBox::ActionRole);
-    QPushButton *cancelButton = msgBox.addButton("取消", QMessageBox::RejectRole);
+    //QPushButton *cancelButton = msgBox.addButton("取消", QMessageBox::RejectRole);
 
     msgBox.exec();
 

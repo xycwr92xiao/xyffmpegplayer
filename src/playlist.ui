@@ -110,8 +110,8 @@
       <widget class="QPushButton" name="btnSaveToNewlist">
        <property name="minimumSize">
         <size>
-         <width>20</width>
-         <height>16</height>
+         <width>24</width>
+         <height>24</height>
         </size>
        </property>
        <property name="maximumSize">
@@ -144,8 +144,8 @@
        </property>
        <property name="minimumSize">
         <size>
-         <width>16</width>
-         <height>16</height>
+         <width>24</width>
+         <height>24</height>
         </size>
        </property>
        <property name="maximumSize">

@@ -169,7 +169,8 @@ private:
 //            void saveAsNewPlaylist(const QString &newListName,const QString &password); // 另存为新播放列表
             void deleteCurrentPlaylist(); // 删除当前播放列表
             void updateCurrentPlaylistTitle(); // 更新当前播放列表标题
-            void loadPlaylistFromFile(const QString &filePath);
+            bool loadPlaylistFromFile(QByteArray fileData, const QString &password);
+            QString getCurrentPlaylistPassword() const;
 private slots:
             // 新增槽函数
             void on_btnListTitle_clicked(); // 点击列表标题

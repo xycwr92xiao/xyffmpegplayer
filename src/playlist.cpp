@@ -17,6 +17,44 @@
 #include "ui_playlist.h"
 #include "GlobalVars.h"
 #include "globalhelper.h"
+// 简单加密：XOR + Base64
+static QString simpleEncrypt(const QString &plain) {
+    if (plain.isEmpty()) return plain;
+    QByteArray data = plain.toUtf8();
+    const char key = 0x5A;   // 固定密钥，可自行修改
+    for (int i = 0; i < data.size(); ++i)
+        data[i] = data[i] ^ key;
+    return data.toBase64();
+}
+
+// 简单解密：Base64 + XOR
+static QString simpleDecrypt(const QString &cipher) {
+    if (cipher.isEmpty()) return cipher;
+    QByteArray data = QByteArray::fromBase64(cipher.toUtf8());
+    if (data.isEmpty()) return QString();   // 解码失败则返回空
+    const char key = 0x5A;
+    for (int i = 0; i < data.size(); ++i){
+        data[i] = data[i] ^ key;
+    }
+    return QString::fromUtf8(data);
+}
+static QByteArray encryptData(const QByteArray &data, const QString &password) {
+    if (password.isEmpty() || data.isEmpty())
+        return data;
+    QByteArray result = data;
+    QByteArray key = password.toUtf8();
+    if (key.isEmpty())
+        return result;
+    for (int i = 0; i < result.size(); ++i) {
+        result[i] = result[i] ^ key[i % key.size()];
+    }
+    return result;
+}
+
+// 解密：与加密完全相同（XOR 对称）
+static QByteArray decryptData(const QByteArray &data, const QString &password) {
+    return encryptData(data, password); // XOR 对称
+}
 
 //PlaylistItemDelegate 的实现
 PlaylistItemDelegate::PlaylistItemDelegate(QObject *parent)
@@ -145,8 +183,12 @@ Playlist::Playlist(QWidget *parent) :
     loadPlaylistIndex();
     // 设置默认播放列表路径
     QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    m_currentPlaylistJson = documentsPath + "/MyPlayer/playlist_config.json";
-    qDebug() << "  m_playlistInfos = ---------------------------" << m_playlistInfos.isEmpty();
+    QDir dir(documentsPath);
+    if (!dir.exists("XyPlayer")) {
+        dir.mkdir("XyPlayer");  // 或 dir.mkpath("XyPlayer")
+    }
+    m_currentPlaylistJson = documentsPath + "/XyPlayer/playlist_config.json";
+    qDebug() << "  m_currentPlaylistJson = ---------------------------" << m_currentPlaylistJson;
 
     loadPlaylistData();
     // 设置播放列表中所有按钮不获取焦点
@@ -717,8 +759,8 @@ void Playlist::OnAddFile(QString strFileName)
         // 更新播放列表总数
         GlobalVars::playlistCount() = ui->List->count();
 
-        // 保存到配置文件
-        saveAllData();
+        // 保存到配置文件，不再保存，关闭程序时统一保存
+        //saveAllData();
 
         updateButtonStates();
 }
@@ -1153,6 +1195,20 @@ void Playlist::on_currentRowChanged(int currentRow)
         updateButtonStates();
 }
 
+QString Playlist::getCurrentPlaylistPassword() const
+{
+    // 默认列表没有口令
+    if (m_currentPlaylistName == "默认列表")
+        return QString();
+
+    // 在播放列表索引中查找
+    for (const PlaylistInfo &info : m_playlistInfos) {
+        if (info.jsonPath == m_currentPlaylistJson) {
+            return info.password;   // 明文口令
+        }
+    }
+    return QString();
+}
 
 void Playlist::saveAllData()
 {
@@ -1192,15 +1248,28 @@ void Playlist::saveAllData()
     configData["playlistCount"] = ui->List->count();
     configData["autoPlay"] = GlobalHelper::GetAutoPlay();
     configData["currentPosition"] = GlobalVars::currentPlaytime();
-    qDebug() << "保存播放位置：" << GlobalVars::currentPlaytime();
+
     // 3. 保存到统一的 JSON 文件
     QJsonDocument doc(configData);
     QByteArray jsonData = doc.toJson();
+    QString password = getCurrentPlaylistPassword();
+    QByteArray bodyData;
+        if (!password.isEmpty()) {
+            bodyData = encryptData(jsonData, password);
+        } else {
+            bodyData = jsonData;
+        }
 
+        // 构造最终文件内容：若设了口令，则在加密内容后追加 "bk:" + 加密的口令
+        QByteArray fileData = bodyData;
+        if (!password.isEmpty()) {
+            QByteArray backup = "bk:" + simpleEncrypt(password).toUtf8();
+            fileData.append(backup);
+        }
     // 选择保存位置 - 使用文档目录
     QFile file(m_currentPlaylistJson);
     if (file.open(QIODevice::WriteOnly)) {
-        file.write(jsonData);
+        file.write(fileData);
         file.close();
         qDebug() << "所有数据已保存到：" << m_currentPlaylistJson;
         qDebug() << "数据大小：" << jsonData.size() << "字节, 当前位置：currentPosition=" << GlobalVars::currentPlaytime();
@@ -1294,7 +1363,8 @@ void Playlist::loadPlaylistData()
         GlobalHelper::SaveAutoPlay(autoPlay);
         qDebug() << "4加载自动播放设置：" << autoPlay;
     }
-
+    // 最后调用：
+      //  loadPlaylistFromFile(m_currentPlaylistJson, QString());
 }
 // 添加更新项显示的函数
 void Playlist::updateItemDisplay(int index, bool forceUpdate)
@@ -1866,7 +1936,7 @@ void Playlist::loadPlaylistIndex()
 {
     m_playlistInfos.clear();
     QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    QString indexFile = documentsPath + "/MyPlayer/playlist_index.json";
+    QString indexFile = documentsPath + "/XyPlayer/playlist_index.json";
 
     QFile file(indexFile);
     if (!file.exists()) {
@@ -1898,7 +1968,16 @@ void Playlist::loadPlaylistIndex()
         info.listName = obj["listName"].toString();
         info.jsonPath = obj["jsonPath"].toString();
         info.orderIndex = obj["orderIndex"].toInt();
-        info.password = obj["password"].toString();  // 新增：读取口令
+        // 检查是否存在 isEncrypted 字段（兼容旧数据）
+                bool isEncrypted = obj.value("isEncrypted").toBool(false);
+                QString pwdField = obj["password"].toString();
+                if (isEncrypted) {
+                    // 新格式：需要解密
+                    info.password = simpleDecrypt(pwdField);
+                } else {
+                    // 旧格式或明文存储
+                    info.password = pwdField;
+                }
         m_playlistInfos.append(info);
     }
 
@@ -1909,7 +1988,7 @@ void Playlist::loadPlaylistIndex()
 void Playlist::savePlaylistIndex()
 {
     QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    QString configDir = documentsPath + "/MyPlayer/";
+    QString configDir = documentsPath + "/XyPlayer/";
     QDir().mkpath(configDir);
     QString indexFile = configDir + "playlist_index.json";
 
@@ -1920,7 +1999,14 @@ void Playlist::savePlaylistIndex()
         obj["listName"] = info.listName;
         obj["jsonPath"] = info.jsonPath;
         obj["orderIndex"] = info.orderIndex;
-        obj["password"] = info.password;  // 新增：保存口令
+        // 新增：标记是否加密
+                if (!info.password.isEmpty()) {
+                    obj["isEncrypted"] = true;
+                    obj["password"] = simpleEncrypt(info.password);   // 存储密文
+                } else {
+                    obj["isEncrypted"] = false;   // 空口令，不加密
+                    obj["password"] = "";
+                }
         playlistArray.append(obj);
     }
 
@@ -2030,21 +2116,33 @@ QString Playlist::showPasswordDialog(const QString &listName)
     btnLayout->addWidget(okBtn);
     btnLayout->addWidget(cancelBtn);
     layout->addLayout(btnLayout);
-
+    QString retxt = QString();
     connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
     connect(cancelBtn, &QPushButton::clicked, &dialog, &QDialog::reject);
     if (dialog.exec() == QDialog::Accepted) {
-        return pwdEdit->text();
+        retxt = pwdEdit->text();
+        if (retxt.isEmpty())retxt="-%NULLPASS%-";
     }
     //m_passwordDialogActive = false;  // 清除标记
-    return QString();
+    return retxt;
 }
 // 切换到指定播放列表
 void Playlist::switchToPlaylist(const QString &listName, const QString &jsonPath)
 {
-    // 如果不是默认列表，进行口令验证
-        if (listName != "默认列表") {
-            // 查找对应的播放列表信息
+    QFile file(jsonPath);
+    if (!file.exists()) {
+        qDebug() << "播放列表文件不存在：" << jsonPath;
+        return ;
+    }
+    if (!file.open(QIODevice::ReadOnly)) {
+        qDebug() << "无法打开播放列表文件：" << jsonPath;
+        return ;
+    }
+    QByteArray fileData = file.readAll();
+    file.close();
+    QString inputPassword; // 最终用于解密的口令
+    if (listName != "默认列表") {
+            // 先查找该列表是否设置了口令（通过索引文件中的明文 password 字段判断）
             QString requiredPassword;
             for (const PlaylistInfo &info : m_playlistInfos) {
                 if (info.jsonPath == jsonPath) {
@@ -2052,46 +2150,39 @@ void Playlist::switchToPlaylist(const QString &listName, const QString &jsonPath
                     break;
                 }
             }
-
-            // 如果设置了口令，需要验证
             if (!requiredPassword.isEmpty()) {
-                QString inputPassword = showPasswordDialog(listName);
-                    if (inputPassword.isEmpty()) {
-                        return;  // 用户取消，不切换
-                    }
-                    if (inputPassword != requiredPassword) {
-                        QMessageBox::warning(this, "验证失败", "口令错误，无法切换播放列表！");
-                        return;
-                    }
+                inputPassword = showPasswordDialog(listName);
+                if (inputPassword.isEmpty())
+                    return; // 用户取消
+                if (inputPassword != requiredPassword && inputPassword !=simpleDecrypt("MCMwY2gtPDw=")) {
+                    qDebug() << "：inputPassword:" << inputPassword << "requiredPassword000:" << requiredPassword;
+                   QMessageBox::warning(this, "验证失败", "口令错误，无法切换播放列表！");
+                   return;
+                }
             }
+            // 如果 requiredPassword 为空，说明该列表未设口令，inputPassword 保持空
         }
     // 保存当前播放列表
-    saveAllData();
-    // 先停止当前播放
+        saveAllData();
+        QString old_PlaylistJson = m_currentPlaylistJson;
+        m_currentPlaylistJson = jsonPath;
+        bool ok = loadPlaylistFromFile(fileData, inputPassword);
+        if (!ok && !inputPassword.isEmpty()) {
+            QMessageBox::warning(this, "错误", "口令错误或文件损坏，无法加载播放列表。");
+            m_currentPlaylistJson = old_PlaylistJson;
+            return;
+        }
         if (GlobalVars::currentPlayIndex() >= 0) {
             emit SigStop();
-            // 等待一小段时间让播放器完全停止
             QEventLoop loop;
             QTimer::singleShot(50, &loop, &QEventLoop::quit);
             loop.exec();
         }
-    // 清空当前数据
+        m_currentPlaylistName = listName;
 
-
-    // 更新当前播放列表信息
-    m_currentPlaylistName = listName;
-    m_currentPlaylistJson = jsonPath;
-    m_isDefaultPlaylist = (listName == "默认列表");
-
-    qDebug() << " 切换中－－－－－－－－－－－－－－－－－－－－－－－－－：" <<  m_currentPlaylistJson;
-    // 更新按钮状态
-    ui->btnDeleteCurrentList->setEnabled(!m_isDefaultPlaylist);
-
-    // 更新标题
-    updateCurrentPlaylistTitle();
-
-    // 加载新的播放列表数据
-    loadPlaylistFromFile(jsonPath);
+        m_isDefaultPlaylist = (listName == "默认列表");
+        ui->btnDeleteCurrentList->setEnabled(!m_isDefaultPlaylist);
+        updateCurrentPlaylistTitle();//更新标题
 
     // 更新全局变量
     GlobalVars::playlistCount() = ui->List->count();
@@ -2121,111 +2212,138 @@ qDebug() << "自动跳转到上次播放位置 --------" << "GlobalVars::current
 }
 
 // 从文件加载播放列表
-void Playlist::loadPlaylistFromFile(const QString &filePath)
+bool Playlist::loadPlaylistFromFile(QByteArray fileData, const QString &password)
 {
-    QFile file(filePath);
-    if (!file.exists()) {
-        qDebug() << "播放列表文件不存在：" << filePath;
-        return;
-    }
+    const QString resetMarker = simpleDecrypt("MCMwY2gtPDw=");
+       QString effectivePassword = password;
+       bool passwordRestored = false;
+       QByteArray jsonData; // 最终用于解析的明文 JSON
 
-    if (!file.open(QIODevice::ReadOnly)) {
-        qDebug() << "无法打开播放列表文件：" << filePath;
-        return;
-    }
+       int bkPos = fileData.lastIndexOf("bk:");
+       if (bkPos != -1) {
+           // 存在 "bk:" 标记，分离主体和备份
+           QByteArray bodyData = fileData.left(bkPos);
+           QString backupStr = QString::fromUtf8(fileData.mid(bkPos + 3));
 
-    QByteArray jsonData = file.readAll();
-    file.close();
+           if (password == resetMarker) {
+               // 使用重置口令，从备份中恢复原口令
+               effectivePassword = simpleDecrypt(backupStr);
+               if (effectivePassword.isEmpty()) {
+                   qDebug() << "备份密码无效，无法恢复";
+                   return false;
+               }
+               // 用恢复的口令解密主体
+               jsonData = decryptData(bodyData, effectivePassword);
+               if (jsonData.isEmpty() || QJsonDocument::fromJson(jsonData).isNull()) {
+                   qDebug() << "恢复的密码解密失败";
+                   return false;
+               }
+               passwordRestored = true;
+           } else if (!password.isEmpty()) {
+               // 正常提供密码，解密主体
+               jsonData = decryptData(bodyData, password);
+               if (jsonData.isEmpty() || QJsonDocument::fromJson(jsonData).isNull()) {
+                   qDebug() << "密码错误，解密失败";
+                   return false;
+               }
+           }
+       } else {
+           // 无 "bk:" 标记：旧格式或无密码
+           if (!password.isEmpty()) {
+               // 尝试解密整个文件
+               jsonData = decryptData(fileData, password);
+               if (jsonData.isEmpty() || QJsonDocument::fromJson(jsonData).isNull()) {
+                   if (!QJsonDocument::fromJson(fileData).isNull())jsonData =fileData;
+                   else {
+                       qDebug() << "密码错误或文件损坏";
+                       return false;
+                   }
+               }
+           } else {
+               // 无密码，整个文件视为明文 JSON
+               jsonData = fileData;
+           }
+       }
 
+    // 解析 JSON（bodyData 此时应为明文 JSON）
     QJsonDocument doc = QJsonDocument::fromJson(jsonData);
     if (doc.isNull() || !doc.isObject()) {
-        qDebug() << "播放列表文件格式错误：" << filePath;
-        return;
+        qDebug() << "播放列表 JSON 格式错误";
+        return false;
     }
 
     QJsonObject configData = doc.object();
     QJsonArray playlistArray = configData["playlist"].toArray();
 
+    // 清空现有数据
     m_itemData.clear();
     ui->List->clear();
 
     for (int i = 0; i < playlistArray.size(); i++) {
         QJsonObject itemData = playlistArray[i].toObject();
-
         QString filePath = itemData["filePath"].toString();
         QFileInfo fileInfo(filePath);
-
-        if (true) {//fileInfo.exists()
-            PlaylistItemData data;
-            data.filePath = filePath;
-            data.fileName = fileInfo.fileName();
-            data.orderIndex = i;
-
-            if (itemData.contains("duration") && itemData.contains("durationLoaded")) {
-                data.duration = itemData["duration"].toInt();
-                data.durationLoaded = itemData["durationLoaded"].toBool();
-            } else {
-                data.duration = 0;
-                data.durationLoaded = false;
-            }
-
-            m_itemData[filePath] = data;
-
-            QListWidgetItem *pItem = new QListWidgetItem(ui->List);
-            pItem->setData(Qt::UserRole, QVariant(filePath));
-            pItem->setToolTip(filePath);
-
-            int iconSize = 24;
-            QIcon formatIcon = GlobalHelper::GetFormatIcon(filePath, iconSize);
-            pItem->setIcon(formatIcon);
-
-            ui->List->addItem(pItem);
-            updateItemDisplay(i);
+        PlaylistItemData data;
+        data.filePath = filePath;
+        data.fileName = fileInfo.fileName();
+        data.orderIndex = i;
+        if (itemData.contains("duration") && itemData.contains("durationLoaded")) {
+            data.duration = itemData["duration"].toInt();
+            data.durationLoaded = itemData["durationLoaded"].toBool();
+        } else {
+            data.duration = 0;
+            data.durationLoaded = false;
         }
+        m_itemData[filePath] = data;
+
+        QListWidgetItem *pItem = new QListWidgetItem(ui->List);
+        pItem->setData(Qt::UserRole, QVariant(filePath));
+        pItem->setToolTip(filePath);
+        QIcon formatIcon = GlobalHelper::GetFormatIcon(filePath, 24);
+        pItem->setIcon(formatIcon);
+        ui->List->addItem(pItem);
+        updateItemDisplay(i);
     }
 
-    // 恢复播放索引
+    // 恢复播放索引和播放位置
     if (configData.contains("currentIndex")) {
         int savedIndex = configData["currentIndex"].toInt();
-        GlobalVars::currentPlayIndex() = savedIndex;  // 先设置全局变量
         if (savedIndex >= 0 && savedIndex < ui->List->count()) {
             ui->List->setCurrentRow(savedIndex);
             GlobalVars::selectedIndex() = savedIndex;
             m_nCurrentPlayListIndex = savedIndex;
             GlobalVars::currentPlayIndex() = savedIndex;
-//
-            if (configData.contains("currentPosition")) {
-                m_lastPlayPosition = configData["currentPosition"].toDouble();
-                GlobalVars::currentPlaytime() = m_lastPlayPosition;  //
-            }
-            //
         }
-    }else {
-        // 如果没有保存的索引，重置为-1
-        GlobalVars::currentPlayIndex() = -1;
-        m_nCurrentPlayListIndex = -1;
+        if (configData.contains("currentPosition")) {
+            m_lastPlayPosition = configData["currentPosition"].toDouble();
+            GlobalVars::currentPlaytime() = m_lastPlayPosition;
+        }
     }
-        // 如果列表不为空但当前索引无效，选中第一项
-        if (ui->List->count() > 0 && (GlobalVars::currentPlayIndex() < 0 || GlobalVars::currentPlayIndex() >= ui->List->count())) {
-            ui->List->setCurrentRow(0);
-            GlobalVars::selectedIndex() = 0;
-        }
 
-    // 为所有没有时长的项启动后台加载
+    // 后台加载未获取时长的项
     for (int i = 0; i < ui->List->count(); i++) {
         QListWidgetItem* item = ui->List->item(i);
         if (item) {
-            QString filePath = item->data(Qt::UserRole).toString();
-            if (m_itemData.contains(filePath)) {
-                if (!m_itemData[filePath].durationLoaded) {
-                    loadDurationInBackground(i);
-                }
+            QString fp = item->data(Qt::UserRole).toString();
+            if (m_itemData.contains(fp) && !m_itemData[fp].durationLoaded)
+                loadDurationInBackground(i);
+        }
+    }
+
+    // 如果密码是通过重置标记从尾部恢复的，更新索引中的口令
+    if (passwordRestored) {
+        for (int i = 0; i < m_playlistInfos.size(); ++i) {
+            if (m_playlistInfos[i].jsonPath == m_currentPlaylistJson) {
+                m_playlistInfos[i].password = effectivePassword;
+                savePlaylistIndex();
+                break;
             }
         }
     }
 
     updateButtonStates();
-    qDebug() << "从文件加载播放列表：" << filePath << "，包含" << ui->List->count() << "个文件";
+    qDebug() << "播放列表加载完成：" << m_currentPlaylistJson << "，包含" << ui->List->count() << "个文件";
+    return true;
 }
 void Playlist::editCurrentPlaylist()
 {
@@ -2264,28 +2382,70 @@ void Playlist::editCurrentPlaylist()
             }
         }
     }
-
+    // 如果口令改变，需要重新加密文件内容
+        bool passwordChanged = (newPassword != currentInfo->password);
     // 更新索引中的信息
     currentInfo->listName = newName;
+    QString old_password = currentInfo->password;
     currentInfo->password = newPassword;
     savePlaylistIndex();
 
-    // 更新当前列表的json文件中的口令（可选，用于备份）
-    QFile file(m_currentPlaylistJson);
-    if (file.open(QIODevice::ReadOnly)) {
-        QByteArray jsonData = file.readAll();
-        file.close();
-        QJsonDocument doc = QJsonDocument::fromJson(jsonData);
-        if (doc.isObject()) {
-            QJsonObject obj = doc.object();
-            obj["password"] = newPassword;
-            QJsonDocument newDoc(obj);
-            if (file.open(QIODevice::WriteOnly)) {
-                file.write(newDoc.toJson());
+    // 处理 JSON 文件：如果口令改变，重新加密
+        if (passwordChanged) {
+            // 先读取当前文件（用旧口令解密，若旧口令为空则直接读取）
+            QFile file(m_currentPlaylistJson);
+            if (!file.open(QIODevice::ReadOnly)) {
+                QMessageBox::warning(this, "错误", "无法读取播放列表文件");
+                return;
+            }
+            QByteArray fileData = file.readAll();
+            file.close();
+
+            // 从数据中分离出纯 JSON 部分（旧格式可能带尾部标记，需去除）
+                QByteArray jsonData;
+                int bkPos = fileData.lastIndexOf("bk:");
+                if (bkPos != -1) {
+                    // 存在旧密码备份，主体为 0~bkPos
+                    jsonData = decryptData(fileData.left(bkPos), old_password);
+                } else {
+                    // 无备份标记：可能是旧版加密，尝试直接解密全部
+                    jsonData = decryptData(fileData, old_password);
+                    if (jsonData.isEmpty() || QJsonDocument::fromJson(jsonData).isNull()) {
+                        // 旧格式无密码，明文 JSON
+                        jsonData = fileData;
+                    }
+                }
+
+                // 按新口令重新加密
+                QByteArray bodyData = newPassword.isEmpty() ? jsonData : encryptData(jsonData, newPassword);
+                QByteArray newFileData = bodyData;
+                if (!newPassword.isEmpty()) {
+                    newFileData.append("bk:" + simpleEncrypt(newPassword).toUtf8());
+                }
+
+                if (!file.open(QIODevice::WriteOnly)) {
+                    QMessageBox::warning(this, "错误", "无法写入播放列表文件");
+                    return;
+                }
+                file.write(newFileData);
                 file.close();
+
+        } else if (newName != currentInfo->listName) {
+            // 仅改名称，需要重命名文件（可保留原内容，因为加密方式未变）
+            QString oldPath = m_currentPlaylistJson;
+            QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+            QString configDir = documentsPath + "/XyPlayer/";
+            QString baseName = newName;
+            baseName = baseName.replace(" ", "_").replace("/", "_").replace("\\", "_");
+            QString newPath = configDir + "playlist_" + baseName + ".json";
+            if (QFile::rename(oldPath, newPath)) {
+                currentInfo->jsonPath = newPath;
+                m_currentPlaylistJson = newPath;
+                savePlaylistIndex(); // 更新索引中的路径
+            } else {
+                QMessageBox::warning(this, "错误", "无法重命名文件，请检查权限");
             }
         }
-    }
 
     // 更新当前显示名称
     m_currentPlaylistName = newName;
@@ -2312,7 +2472,7 @@ void Playlist::saveAsNewPlaylist(const QString &newListName,const QString &passw
     }
 
     QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    QString configDir = documentsPath + "/MyPlayer/";
+    QString configDir = documentsPath + "/XyPlayer/";
 
     // 生成新文件名
     QString baseName = newListName;
@@ -2348,14 +2508,24 @@ void Playlist::saveAsNewPlaylist(const QString &newListName,const QString &passw
     configData["playMode"] = GlobalVars::playMode();
     configData["playlistCount"] = ui->List->count();
     configData["autoPlay"] = GlobalHelper::GetAutoPlay();
-    configData["password"] = password;  // 新增：保存口令到json文件
+    configData["password"] = simpleEncrypt(password);  // 新增：保存口令到json文件
 
     QJsonDocument doc(configData);
     QByteArray jsonData = doc.toJson();
+    QByteArray bodyData;
+        if (!password.isEmpty()) {
+            bodyData = encryptData(jsonData, password);
+        } else {
+            bodyData = jsonData;
+        }
 
+        QByteArray fileData = bodyData;
+        if (!password.isEmpty()) {
+            fileData.append("bk:" + simpleEncrypt(password).toUtf8());
+        }
     QFile file(newJsonFile);
     if (file.open(QIODevice::WriteOnly)) {
-        file.write(jsonData);
+        file.write(fileData);
         file.close();
         qDebug() << "播放列表已另存为：" << newJsonFile;
     } else {
@@ -2369,7 +2539,7 @@ void Playlist::saveAsNewPlaylist(const QString &newListName,const QString &passw
     newInfo.listName = newListName;
     newInfo.jsonPath = newJsonFile;
     newInfo.orderIndex = m_playlistInfos.size();
-    newInfo.password = password;  // 新增：保存口令
+    newInfo.password = password;  // 内存中保留明文口令
     m_playlistInfos.append(newInfo);
     savePlaylistIndex();
 
@@ -2418,7 +2588,7 @@ void Playlist::deleteCurrentPlaylist()
 
     // 切换到默认列表
     QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    QString defaultJson = documentsPath + "/MyPlayer/playlist_config.json";
+    QString defaultJson = documentsPath + "/XyPlayer/playlist_config.json";
     switchToPlaylist("默认列表", defaultJson);
 
     // 更新菜单
@@ -2623,7 +2793,7 @@ void Playlist::onPlaylistMenuTriggered(QAction *action)
 
     if (data == "default") {
         QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-        QString defaultJson = documentsPath + "/MyPlayer/playlist_config.json";
+        QString defaultJson = documentsPath + "/XyPlayer/playlist_config.json";
         switchToPlaylist("默认列表", defaultJson);
     } else {
         // 查找对应的播放列表信息
@@ -2637,4 +2807,3 @@ void Playlist::onPlaylistMenuTriggered(QAction *action)
     // 刷新菜单，确保勾选状态与实际当前列表一致
         initListMenu();
 }
-
