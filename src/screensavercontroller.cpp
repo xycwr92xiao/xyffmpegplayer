@@ -1,5 +1,4 @@
-// ScreenSaverController.cpp
-#include "ScreenSaverController.h"
+#include "screensavercontroller.h"
 #include <QDebug>
 
 // 根据操作系统包含不同的头文件

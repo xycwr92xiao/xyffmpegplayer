@@ -1,4 +1,4 @@
-#include "TransparentSubtitleWindow.h"
+#include "transparentsubtitlewindow.h"
 #include <QPainter>
 #include <QScreen>
 #include <QApplication>

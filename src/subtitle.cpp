@@ -12,7 +12,6 @@ Subtitle::Subtitle(QObject *parent) : QObject(parent)
 bool Subtitle::loadSubtitle(const QString& mediaFilePath)
 {
     clear();
-
     QFileInfo mediaFileInfo(mediaFilePath);
     QString baseName = mediaFileInfo.completeBaseName();
     QString dirPath = mediaFileInfo.absolutePath();

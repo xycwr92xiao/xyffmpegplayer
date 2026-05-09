@@ -156,7 +156,7 @@ private:
     int synchronize_audio(VideoState *is, int nb_samples);
 
     int audio_open(void *opaque, int64_t wanted_channel_layout, int wanted_nb_channels, int wanted_sample_rate, struct AudioParams *audio_hw_params);
-    int stream_component_open(VideoState *is, int stream_index);
+    int stream_component_open(VideoState *is, unsigned int stream_index);
     int stream_has_enough_packets(AVStream *st, int stream_id, PacketQueue *queue);
     int is_realtime(AVFormatContext *s);
     void ReadThread(VideoState *CurStream);
@@ -179,7 +179,7 @@ private:
     void calculate_display_rect(SDL_Rect *rect, int scr_xleft, int scr_ytop, int scr_width, int scr_height, int pic_width, int pic_height, AVRational pic_sar);
     int upload_texture(SDL_Texture *tex, AVFrame *frame, struct SwsContext **img_convert_ctx);
     void video_image_display(VideoState *is);
-    void stream_component_close(VideoState *is, int stream_index);
+    void stream_component_close(VideoState *is, unsigned int stream_index);
     void stream_close(VideoState *is);
     double get_clock(Clock *c);
 
@@ -196,7 +196,7 @@ private:
     void step_to_next_frame(VideoState *is);
     double compute_target_delay(double delay, VideoState *is);
     double vp_duration(VideoState *is, Frame *vp, Frame *nextvp);
-    void update_video_pts(VideoState *is, double pts, int64_t pos, int serial);
+    void update_video_pts(VideoState *is, double pts,  int serial);
     // 均衡器相关
         bool m_eqEnabled;
         int m_balance;  // -100 to 100

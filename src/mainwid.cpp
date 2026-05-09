@@ -29,29 +29,26 @@
 
 MainWid::MainWid(QMainWindow *parent) :
     QMainWindow(parent),
+    m_bCommandLineFileProcessed(false),  // 新增标志位
+    m_bPlaylistVisible(false),
+    m_equalizerDialog(nullptr),
+    m_balance(0),
+    m_eqEnabled(false),
     ui(new Ui::MainWid),
     m_nShadowWidth(0),
-    m_stMenu(this),
+    m_bFullscreenCtrlBarShow(false),
     m_stPlaylist(this),
     m_stTitle(this),
     m_bMoveDrag(false),
+    m_stMenu(this),
     m_stActFullscreen(this),
     m_bResizeDrag(false),
-    m_bPlaylistVisible(false),
     m_ResizeEdges(Qt::Edges()),
-    m_equalizerDialog(nullptr),
-        m_eqEnabled(false),
-        m_balance(0),
-        m_bAlwaysOnTop(false),
-            m_bIsFullScreen(false),
-            m_playlistHideTimer(nullptr),
-            m_bClickVideoToHidePlaylist(true),
-            m_bPlaylistBlockingControls(false),
-            m_bMouseCursorHidden(false),  // 新增：初始化鼠标指针状态
-            m_lastMouseActivityTime(0),    // 新增：初始化最后活动时间
-            m_bFullscreenCtrlBarShow(false),   // 新增：初始化控制栏显示状态
-            m_bCommandLineFileProcessed(false)  // 新增标志位
-
+    m_bAlwaysOnTop(false),
+    m_bIsFullScreen(false),
+    m_playlistHideTimer(nullptr),
+    m_bClickVideoToHidePlaylist(true),
+    m_bPlaylistBlockingControls(false)
 {
     ui->setupUi(this);
     // 添加窗口位置恢复代码
@@ -226,6 +223,7 @@ MainWid::MainWid(QMainWindow *parent) :
                  emit SigPlayOrPause();
                  m_doubleClickTimer->stop();
           });
+          ui->TitleWid->setObjectName("TitleWid");
 }
 
 MainWid::~MainWid()
@@ -417,8 +415,6 @@ void MainWid::openFileFromCommandLine(const QString &filePath)
 {
     m_commandLineFiles.append(filePath);
 }
-
-
 
 // 处理单个命令行文件
 void MainWid::processCommandLineFile()
@@ -2088,7 +2084,7 @@ void MainWid::OnMaxBtnClicked()
         }
     }
 }
-static int playlistWidth = 300;
+//static int playlistWidth = 300;
 static int video_width = 592; // 固定视频宽度
 
 void MainWid::OnShowOrHidePlaylist()
@@ -2480,9 +2476,6 @@ void MainWid::onShowMediaInfo()
     if (currentIndex >= 0 && currentIndex < GlobalVars::playlistCount()) {
         // 调用 Playlist 的 ShowFileInfoByIndex 函数
         m_stPlaylist.ShowFileInfoByIndex(currentIndex);
-    } else {
-        // 如果没有当前播放的文件，可以显示一个提示
-        qDebug() << "提示", "请先播放一个媒体文件";
     }
 }
 void MainWid::onShowMediaPath()
@@ -2491,9 +2484,6 @@ void MainWid::onShowMediaPath()
     if (currentIndex >= 0 && currentIndex < GlobalVars::playlistCount()) {
         // 调用 Playlist 的 ShowFileInfoByIndex 函数
         m_stPlaylist.ShowFilePathByIndex(currentIndex);
-    } else {
-        // 如果没有当前播放的文件，可以显示一个提示
-        qDebug() << "提示", "请先播放一个媒体文件";
     }
 }
 //切换标题栏与控制栏的显示与隐藏

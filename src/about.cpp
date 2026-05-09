@@ -1,9 +1,6 @@
 ﻿#include "about.h"
 #include "ui_about.h"
-
 #include "globalhelper.h"
-
-
 
 About::About(QWidget *parent)
     : QWidget(parent)
@@ -37,10 +34,8 @@ bool About::Init()
 
     this->setWindowIcon(QIcon("://res/player.png"));
     ui->LogoLabel->setPixmap(QPixmap("://res/player.png").scaled(80, 80, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-
     QString strVersion = QString("版本：%1\n时间：%2").arg(GlobalHelper::GetAppVersion()).arg(QString(__DATE__) + " " + QString(__TIME__));
     ui->VersionLabel->setText(strVersion);
-
     return true;
 }
 

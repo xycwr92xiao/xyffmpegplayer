@@ -14,22 +14,18 @@
 #include <QFontMetrics>
 #include <QMessageBox>
 #include <QFileDialog>
-
 #include "title.h"
 #include "ui_title.h"
 #include "globalvars.h"
 #include "globalhelper.h"
 
-#pragma execution_character_set("utf-8")
-
 Title::Title(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::Title),
-    m_stActionGroup(this),
-    m_stMenu(this)
+    m_stMenu(this),
+    m_stActionGroup(this)
 {
     ui->setupUi(this);
-
     connect(ui->CloseBtn, &QPushButton::clicked, this, &Title::SigCloseBtnClicked);
     connect(ui->MinBtn, &QPushButton::clicked, this, &Title::SigMinBtnClicked);
     connect(ui->MaxBtn, &QPushButton::clicked, this, &Title::SigMaxBtnClicked);
@@ -160,6 +156,7 @@ void Title::mouseDoubleClickEvent(QMouseEvent *event)
 
 void Title::resizeEvent(QResizeEvent *event)
 {
+    qDebug() << event;
     //ChangeMovieNameShow();
 }
 

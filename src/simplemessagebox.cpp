@@ -1,5 +1,5 @@
 // SimpleMessageBox.cpp
-#include "SimpleMessageBox.h"
+#include "simplemessagebox.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>

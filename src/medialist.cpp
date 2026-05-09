@@ -14,16 +14,13 @@
 #include <QTextBrowser>
 #include <QProgressDialog>
 #include <QtConcurrent>
-
 #include "globalvars.h"
-
 #include "medialist.h"
 extern "C" {
 #include "libavformat/avformat.h"
 #include "libavcodec/avcodec.h"
 #include "libavutil/avutil.h"
 }
-#pragma execution_character_set("utf-8")
 
 MediaList::MediaList(QWidget *parent)
     : QListWidget(parent),
@@ -36,11 +33,11 @@ MediaList::MediaList(QWidget *parent)
       m_stActClearList(this),
       m_stActOpenLocation(this),
       m_stActFileInfo(this),
-      m_stActRename(this),       // 新增
       m_stActSeparator1(this),
       m_stActSeparator2(this),
       m_stActSeparator3(this),
       m_stActSeparator4(this),   // 新增
+      m_stActRename(this),
       m_isRenaming(false),
       m_renameIndex(-1)
 {

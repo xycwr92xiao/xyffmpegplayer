@@ -17,20 +17,17 @@
 #include "ui_show.h"
 #include "globalvars.h"
 #include "globalhelper.h"
-#include "SimpleMessageBox.h"
-
-#pragma execution_character_set("utf-8")
+#include "simplemessagebox.h"
 
 QMutex g_show_rect_mutex;
-
 Show::Show(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::Show),
-    m_stActionGroup(this),
-    m_stMenu(this),
     m_pSubtitle(nullptr),
     m_pSubtitleLabel(nullptr),
     m_pSubtitleTimer(nullptr),
+    ui(new Ui::Show),
+    m_stMenu(this),
+    m_stActionGroup(this),
     m_bDrag(false)  // 初始化拖动标志
 {
     ui->setupUi(this);
@@ -206,15 +203,24 @@ bool Show::Init()
 
 	return true;
 }
+
 void Show::showInfo(const QString& text,int x,int y)
 {
     if (!m_pInfoWindow) return;
     QFont font("Microsoft YaHei", 12, QFont::Bold);
     QFontMetrics fm(font);
     tipIofoWinWidth = fm.horizontalAdvance(text)+x;
+    int titleY =0;
+    const auto& widgets = QApplication::topLevelWidgets();
+        for (QWidget* w : widgets) {
+            if (w->objectName() == "TitleWid")
+                if (w) {
+                    titleY = w->y()+w->height();                     // 相对于主窗口的 Y
+                }
+        }
     // 设置文本并调整大小
     QPoint globalPos = mapToGlobal(QPoint(0, 0));
-    m_pInfoWindow->setPosition(globalPos.x()+x, globalPos.y()+(m_bAudioMode ?240:GlobalVars::getFullScreen()?50:0)+y, tipIofoWinWidth, 30);
+    m_pInfoWindow->setPosition(globalPos.x()+x, globalPos.y()+(m_bAudioMode ?240:GlobalVars::getFullScreen()?titleY:0)+y, tipIofoWinWidth, 30);
     m_pInfoWindow->setSubtitleText(text);
     m_pInfoWindow->show();
     m_pInfoWindow->raise();              // 确保显示在最上层
@@ -353,7 +359,7 @@ void Show::ChangeShow()
         }
         // 添加：全屏切换时强制通知视频渲染器重新设置显示尺寸
                 if (GlobalVars::getFullScreen()) {
-                    QTimer::singleShot(50, this, [this, width, height]() {
+                    QTimer::singleShot(50, this, [ width, height]() {
                         // 通过 VideoCtl 重新设置视频输出尺寸
                         VideoCtl::GetInstance()->SetVideoDisplaySize(width, height);
                     });
@@ -948,7 +954,6 @@ void Show::updateSpectrumDisplayArea()
 {
     if (!m_bAudioMode || !m_showSpectrum) return;
 
-    int width = this->width();
     int height = this->height();
 
     // 顶部音频信息区域高度

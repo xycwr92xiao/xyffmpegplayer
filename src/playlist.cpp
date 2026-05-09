@@ -166,9 +166,9 @@ QSize PlaylistItemDelegate::sizeHint(const QStyleOptionViewItem &option, const Q
 
 Playlist::Playlist(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::Playlist),
     m_currentPlaylistName("默认列表"),
-    m_playlistMenu(nullptr)  // 新增：初始化菜单指针
+    m_playlistMenu(nullptr),  // 新增：初始化菜单指针
+    ui(new Ui::Playlist)
 {
     ui->setupUi(this);
     GlobalVars::selectedIndex() = -1;  // 初始化选中索引

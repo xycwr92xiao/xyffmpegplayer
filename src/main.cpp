@@ -8,7 +8,6 @@ int main(int argc, char *argv[])
 {
 //    qDebug() << "123";
     QApplication a(argc, argv);
-    
     //使用第三方字库，用来作为UI图片 ://res/fa-solid-900.ttf
     QFontDatabase::addApplicationFont("://res/fontawesome-webfont.ttf");
     // 设置应用程序名称和组织名，用于QSettings

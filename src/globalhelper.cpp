@@ -6,7 +6,6 @@
 #include <QSvgRenderer>
 #include <QRegularExpression>
 #include <QPainter>
-
 #include "globalhelper.h"
 #include "globalvars.h"
 
@@ -18,7 +17,6 @@ const QString APP_VERSION = "0.1.0";
 
 GlobalHelper::GlobalHelper()
 {
-
 }
 
 QString GlobalHelper::GetQssStr(QString strQssPath)

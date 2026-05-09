@@ -117,7 +117,7 @@ private:
     Qt::Edges GetEdgesForBorderPos(const QPoint &pos) const;
 
     QFrame *m_borderFrame;
-    bool m_bPlaylistVisible; // 记录播放列表是否可见
+    bool m_bPlaylistVisible = false; // 记录播放列表是否可见
     QSize m_originalWindowSize; // 原始窗口大小，用于恢复
     // 均衡器相关
     EqualizerDialog* m_equalizerDialog;
@@ -242,8 +242,8 @@ private:
                 QSize m_preFullScreenVideoSize;
                 void updatePlaylistButtonState();
 
-                qint64 m_lastMouseActivityTime; ///< 最后鼠标活动时间戳（毫秒）
-                bool m_bMouseCursorHidden;     ///< 鼠标指针是否已隐藏
+                qint64 m_lastMouseActivityTime = 0; ///< 最后鼠标活动时间戳（毫秒）
+                bool m_bMouseCursorHidden = false;     ///< 鼠标指针是否已隐藏
                 // 鼠标活动检测函数
                 void UpdateMouseActivity();
                 void changeCtrlTileShow();
