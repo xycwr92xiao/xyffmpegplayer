@@ -45,6 +45,7 @@ struct PlaylistInfo {
     QString jsonPath;
     int orderIndex;
     QString password;  // 新增：播放列表口令
+    QString infotxt;
 };
 
 class Playlist : public QWidget
@@ -156,7 +157,7 @@ private:
         void updateItemDataPath(const QString &oldPath, const QString &newPath);
         //播放列表管理相关
         QList<PlaylistInfo> m_playlistInfos; // 存储所有播放列表信息
-
+        QString m_currentPlaylistPath;
             QString m_currentPlaylistJson; // 当前播放列表JSON文件路径
             bool m_isDefaultPlaylist = true; // 是否是默认列表
             // 播放列表菜单
@@ -198,15 +199,17 @@ private:
     int m_nCurrentPlayListIndex=-1;
     PlaylistItemDelegate* m_pItemDelegate = nullptr; // 添加委托指针
     // 新增：重命名相关状态
-        qint64 m_lastPlayPosition;  // 记录播放位置
+        qint64 m_lastPlayPosition =0 ;  // 记录播放位置
         int m_firstIndex = -1;
 
-        bool showPlaylistConfigDialog(QString &name, QString &password, bool forEdit = false,
+        bool showPlaylistConfigDialog(QString &name, QString &password,  QString &infotxt,bool forEdit = false,
                                            const QString &oldName = QString(),
-                                           const QString &oldPassword = QString());
+                                           const QString &oldPassword = QString(),
+                                      const QString &oldInfotxt = QString()
+                                      );
             void editCurrentPlaylist();
-            void saveAsNewPlaylist(const QString &newListName, const QString &password = "");
-            QString showPasswordDialog(const QString &listName);
+            void saveAsNewPlaylist(const QString &newListName, const QString &password = "",const QString &infotxt = "");
+            QString showPasswordDialog(const QString &listName,const QString &passWord,const QString &infotxt = "");
 };
 
 
