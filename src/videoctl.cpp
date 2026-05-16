@@ -219,7 +219,6 @@ void VideoCtl::video_image_display(VideoState *is)
         {
             m_nFrameW = vp->frame->width;
             m_nFrameH = vp->frame->height;
-            qDebug() << "m_nFrameW = " << m_nFrameW << "vp->frame->width = " << vp->frame->width << "m_nFrameH = " << m_nFrameH << " vp->frame->height = " << vp->frame->height;
             emit SigFrameDimensionsChanged(m_nFrameW, m_nFrameH);
         }
     }

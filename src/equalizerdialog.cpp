@@ -38,7 +38,7 @@ void EqualizerDialog::initUI()
     m_presetComboBox = new QComboBox(this);
     for (const auto &preset : m_presets) {
         m_presetComboBox->addItem(preset.name);
-    }
+     }
     m_presetComboBox->setCurrentIndex(0); // 默认为"Flat"
     presetLayout->addWidget(m_presetComboBox);
     presetLayout->addStretch();

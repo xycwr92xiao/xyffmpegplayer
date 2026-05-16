@@ -186,7 +186,7 @@ Playlist::Playlist(QWidget *parent) :
     loadPlaylistIndex();
     // 设置默认播放列表路径
     m_currentPlaylistJson = m_currentPlaylistPath + "playlist_config.json";
-    qDebug() << "  m_currentPlaylistJson = ---------------------------" << m_currentPlaylistJson;
+    qDebug() << "iloveyou:->zhangyu" << m_currentPlaylistJson;
     loadPlaylistData();
     // 设置播放列表中所有按钮不获取焦点
         QList<QPushButton*> buttons = this->findChildren<QPushButton*>();
@@ -726,7 +726,7 @@ void Playlist::OnAddFile(QString strFileName)
 //            }
         QIcon formatIcon = GlobalHelper::GetFormatIcon(filePath,iconSize);
         pItem->setIcon(formatIcon);
-
+        qDebug() << "pItempItempItempItempItempItempItempItempItem" << pItem;
         ui->List->addItem(pItem);
 
         // 存储数据（如果已有保存的数据，使用保存的数据）

@@ -23,7 +23,7 @@
 #include <QLabel>
 #include <QHBoxLayout>
 #include <QMessageBox>
-#include "TransparentSubtitleWindow.h"
+#include "transparentsubtitlewindow.h"
 #include "videoctl.h"
 #include "subtitle.h"
 

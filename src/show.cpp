@@ -311,7 +311,7 @@ void Show::updateSubtitleWindowPosition()
 
 void Show::OnFrameDimensionsChanged(int nFrameWidth, int nFrameHeight)
 {
-    qDebug() << "Show::OnFrameDimensionsChanged" << nFrameWidth << nFrameHeight;
+    //qDebug() << "Show::OnFrameDimensionsChanged" << nFrameWidth << nFrameHeight;
     m_nLastFrameWidth = nFrameWidth;
     m_nLastFrameHeight = nFrameHeight;
     // 发射视频尺寸变化信号

@@ -35,7 +35,7 @@ void ScreenSaverController::inhibit()
     SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
     m_wasSet = true;
     m_isActive = true;
-    qDebug() << "[ScreenSaver] Windows: System sleep and screensaver inhibited";
+    //qDebug() << "[ScreenSaver] Windows: System sleep and screensaver inhibited";
 
 #elif defined(Q_OS_MAC)
     // macOS: 使用 IOPMAssertionCreateWithName API

@@ -947,6 +947,7 @@ void MainWid::StopResize()
 }
 void MainWid::OnFullScreenPlay()
 {
+    ui->CtrlBarWid->setFixedWidth(QWIDGETSIZE_MAX);
     if (m_bFullScreenPlay == false)
     {
         isShowPlaylistOnWin = m_bPlaylistVisible;//备份窗口模式列表是不是显示
@@ -2275,8 +2276,8 @@ void MainWid::showPlaylistMaximized(bool show)
         // 计算可用宽度（考虑控制面板）
         int totalWidth = this->width();
         // 设置视频和播放列表的比例（例如 7:3）
-        int videoWidth = totalWidth * 70 / 100;
-        int playlistW = totalWidth * 30 / 100;
+        int videoWidth = totalWidth - playlistWidth;
+        int playlistW = playlistWidth;
 
         // 确保控制面板与视频窗口同步收缩
         if (ui->CtrlBarWid) {
@@ -2293,6 +2294,7 @@ void MainWid::showPlaylistMaximized(bool show)
     }
     else
     {
+        playlistWidth = ui->PlaylistWid->width();
         // 隐藏播放列表 - 视频恢复全宽
         ui->PlaylistWid->hide();
         m_splitter->widget(1)->hide();
