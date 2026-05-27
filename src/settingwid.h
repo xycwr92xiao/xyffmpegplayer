@@ -4,6 +4,9 @@
 #include <QSettings>
 #include <QFontDatabase>
 #include "ui_settingwid.h"
+#include <QPixmap>
+#include <QPainter>
+#include <QPainterPath>
 
 class SettingWid : public QDialog
 {
@@ -28,6 +31,7 @@ public:
         QColor getSubtitleHoverBgColor() const;
         QColor getSubtitleLeaveBgColor() const;
         bool getSubtitleKeepBackground() const;
+        int getMiaobianOrYinying() const;
     // 设置字幕设置
     void setSubtitleFont(const QString &family, int size);
     void setSubtitleColors(const QColor &textColor, const QColor &strokeColor,
@@ -48,6 +52,8 @@ private slots:
     void onHoverBgColorClicked();
     void onLeaveBgColorClicked();
     void onKeepBackgroundChanged(int state);
+    void onMiaobianChanged(int state);
+    void onYinyingChanged(int state);
     void onSpectrumModeChanged1();
     void onSpectrumModeChanged2();
     void onSpectrumModeChanged3();
@@ -77,7 +83,7 @@ private:
         QColor m_currentHoverBgColor;
         QColor m_currentLeaveBgColor;
         bool m_currentKeepBackground;
-
+        int m_currentMiaobianOrYinying;
     // 临时设置（用于取消时恢复）
     QString m_tempFontFamily;
     int m_tempFontSize;
@@ -88,4 +94,6 @@ private:
         QColor m_tempHoverBgColor;
         QColor m_tempLeaveBgColor;
         bool m_tempKeepBackground;
+        int m_tempMiaobianOrYinying;
+
 };

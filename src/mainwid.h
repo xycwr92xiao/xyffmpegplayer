@@ -95,6 +95,7 @@ private:
     void OnFullScreenPlay();
     void setExtend();
     void onShowSubtitle();
+    void onLockSubtitle();
     void OnCtrlBarAnimationTimeOut();
     //void OnFullscreenMouseDetectTimeOut();
 
@@ -201,7 +202,9 @@ private:
     QAction m_stActFullscreen;
     QAction m_stActPlaylist;
     QAction m_stActShowSubtitle;
+    QAction m_stActLockSubtitle;
     bool m_bShowSubtitle = true;
+    bool m_bLockSubtitle = false;
     QAction m_stActExtend;
     QMap<QString, void(MainWid::*)()> map_act_;
     // 边框调整大小相关成员变量

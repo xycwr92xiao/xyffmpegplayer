@@ -210,6 +210,7 @@ private:
             void editCurrentPlaylist();
             void saveAsNewPlaylist(const QString &newListName, const QString &password = "",const QString &infotxt = "");
             QString showPasswordDialog(const QString &listName,const QString &passWord,const QString &infotxt = "");
+            QSettings m_settings;
 };
 
 

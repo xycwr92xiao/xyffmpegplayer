@@ -25,8 +25,10 @@ int main(int argc, char *argv[])
         GlobalVars::subtitleHoverBgColor() = QColor(settings.value("HoverBgColor", "#96000000").toString());
         GlobalVars::subtitleLeaveBgColor() = QColor(settings.value("LeaveBgColor", "#64000000").toString());
         GlobalVars::subtitleKeepBackground() = settings.value("KeepBackground", false).toBool();
+        GlobalVars::subtitleLockwindows() = settings.value("LockSubTitle", false).toBool();
+        GlobalVars::miaobianOrYinying() = settings.value("MiaobianOrYinying", 1).toInt();
         settings.endGroup();
-        qDebug() << "撷取配置文件：－－－－－－－－－－－－－－－" << GlobalVars::subtitleFontFamily()<< GlobalVars::subtitleFontSize();
+        qDebug() << "撷取配置文件：－－－－－－－－－－－－－－－" << GlobalVars::subtitleLockwindows() << GlobalVars::subtitleFontSize();
     MainWid w;
     if (w.Init() == false)
     {

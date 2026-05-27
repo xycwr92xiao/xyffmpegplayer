@@ -57,6 +57,7 @@ MainWid::MainWid(QMainWindow *parent) :
         // 读取保存的窗口位置和大小
         QRect savedGeometry = settings.value("Geometry", QRect(100, 100, 600, 500)).toRect();
         m_bPlaylistVisible = settings.value("PlaylistVisible", false).toBool();
+        m_bLockSubtitle = GlobalVars::subtitleLockwindows();//settings.value("LockSubTitle", false).toBool();
         playlistWidth = settings.value("playlistWidth", 300).toInt();
         settings.endGroup();
 
@@ -70,7 +71,8 @@ MainWid::MainWid(QMainWindow *parent) :
             this->move(screenGeometry.center() - rect().center());
         }
     //setMinimumSize(350, 300); // 设置合适的最小尺寸
-    this->setMinimumSize(200, 400);
+    this->setMinimumSize(m_bPlaylistVisible?500:460, 400);
+
     // 初始化均衡器增益为0
     m_eqGains = QList<int>{0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     ui->statusbar->hide();
@@ -115,7 +117,6 @@ MainWid::MainWid(QMainWindow *parent) :
 
             // 8. 将ShowCtrlBarPlaylistBgWidget添加到分割器左侧
             m_splitter->addWidget(ui->ShowCtrlBarPlaylistBgWidget);
-
             // 9. 将PlaylistWid添加到分割器右侧
             m_splitter->addWidget(ui->PlaylistWid);
 
@@ -394,6 +395,7 @@ bool MainWid::ConnectSignalSlots()
         connect(&m_stActPlaylist, &QAction::triggered, this, &MainWid::OnShowOrHidePlaylist);
         connect(&m_stActExtend, &QAction::triggered, this, &MainWid::setExtend);
         connect(&m_stActShowSubtitle, &QAction::triggered,this, &MainWid::onShowSubtitle);
+        connect(&m_stActLockSubtitle, &QAction::triggered,this, &MainWid::onLockSubtitle);
         connect(&m_stActAlwaysOnTop, &QAction::triggered, this, &MainWid::OnAlwaysOnTopBtnClicked);
     // 连接播放状态变化信号来更新菜单状态
         // 连接视频尺寸变化信号
@@ -599,7 +601,7 @@ void MainWid::mouseMoveEvent(QMouseEvent *event)
             // 拖动窗口时立即更新字幕位置
             if (ui->ShowWid) {
                 // 调用Show类的更新函数
-                ui->ShowWid->updateSubtitleWindowPosition();
+                if(!GlobalVars::subtitleLockwindows())ui->ShowWid->updateSubtitleWindowPosition();
                 ui->ShowWid->updateInfoWindowPosition();
             }
         }
@@ -666,7 +668,7 @@ bool MainWid::eventFilter(QObject *watched, QEvent *event)
                       bool isMenuVisible = m_onMenu;
                       m_onMenu = false;
                       m_bPlaylistVisible = (ui->PlaylistWid->x() < m_stPlayListAnimationHide.x());
-                      qDebug() << "11111！ ui->PlaylistWid->x() = "<< ui->PlaylistWid->x() << "m_stPlayListAnimationHide.x()==" << m_stPlayListAnimationHide.x() << "ui->PlaylistWid->width()" << ui->PlaylistWid->width();
+                     //qDebug() << "11111！ ui->PlaylistWid->x() = "<< ui->PlaylistWid->x() << "m_stPlayListAnimationHide.x()==" << m_stPlayListAnimationHide.x() << "ui->PlaylistWid->width()" << ui->PlaylistWid->width();
                      if (m_bFullScreenPlay && !m_bPlaylistVisible && !isMenuVisible) {
                                      m_doubleClickTimer->start(300);
                      }
@@ -680,7 +682,7 @@ bool MainWid::eventFilter(QObject *watched, QEvent *event)
                 bool isPlaylistVisible = ui->PlaylistWid->x()<m_stPlayListAnimationHide.x();
                 QRect playlistRect = ui->PlaylistWid->geometry();
                 m_bClickVideoToHidePlaylist = !playlistRect.contains(mouseEvent->globalPos());
-                qDebug() << "22222！ ui->PlaylistWid->x() = "<< ui->PlaylistWid->x() << "m_stPlayListAnimationHide.x()==" << m_stPlayListAnimationHide.x() <<"m_bClickVideoToHidePlaylist=" <<m_bClickVideoToHidePlaylist;
+                //qDebug() << "22222！ ui->PlaylistWid->x() = "<< ui->PlaylistWid->x() << "m_stPlayListAnimationHide.x()==" << m_stPlayListAnimationHide.x() <<"m_bClickVideoToHidePlaylist=" <<m_bClickVideoToHidePlaylist;
                 if (isPlaylistVisible && m_bClickVideoToHidePlaylist)
                 {
                     qDebug() << " 准备隐藏播放列表" ;
@@ -956,7 +958,7 @@ void MainWid::OnFullScreenPlay()
                 m_preFullScreenSplitterState = m_splitter->saveState();
             }
         playlistWidth = ui->PlaylistWid->width() == 188 ? 300:ui->PlaylistWid->width();
-        qDebug() << "进入全屏前列表宽度：－－－－－－－－－－－－－" << playlistWidth;
+
         m_preFullScreenSize = this->size();
         m_preFullScreenPos = this->pos();
         m_preFullScreenVideoSize = ui->ShowWid->size();
@@ -976,27 +978,27 @@ void MainWid::OnFullScreenPlay()
 
         this->hide();
 
-        // 设置视频窗口为独立窗口
+        // 设置控制栏为独立窗口
         ui->ShowWid->setWindowFlags(Qt::Window);
-        QScreen *pStCurScreen = qApp->screens().at(qApp->desktop()->screenNumber(this));
+        QScreen *pStCurScreen = qApp->screenAt(this->geometry().center());
         ui->ShowWid->windowHandle()->setScreen(pStCurScreen);
         ui->ShowWid->showFullScreen();
-
-        // 设置控制栏为独立窗口
         QRect stScreenRect = pStCurScreen->geometry();
+        ui->ShowWid->setGeometry(stScreenRect);
+        // 设置控制栏为独立窗口
         int nCtrlBarHeight = ui->CtrlBarWid->height();
         int nTitleBarHeight = ui->TitleWid->height(); // 获取标题栏高度
         int nPlayListHeight = stScreenRect.height() - nCtrlBarHeight - nTitleBarHeight;
         int nPlaylistWidth =  stScreenRect.width()*0.25;
-        int nX0 = stScreenRect.width() - nPlaylistWidth;
-        int nX = ui->ShowWid->x();
-        m_stCtrlBarAnimationShow = QRect(nX, stScreenRect.height() - nCtrlBarHeight, stScreenRect.width(), nCtrlBarHeight);
-        m_stCtrlBarAnimationHide = QRect(nX, stScreenRect.height(), stScreenRect.width(), nCtrlBarHeight);
-        m_stTitleBarAnimationShow = QRect(nX, 0, stScreenRect.width(), nTitleBarHeight);
-        m_stTitleBarAnimationHide = QRect(nX, -nTitleBarHeight, stScreenRect.width(), nTitleBarHeight);
+        int nX0 = ui->ShowWid->x();
+        int nX1 = nX0+stScreenRect.width() - nPlaylistWidth;
+        m_stCtrlBarAnimationShow = QRect(nX0, stScreenRect.height() - nCtrlBarHeight, stScreenRect.width(), nCtrlBarHeight);
+        m_stCtrlBarAnimationHide = QRect(nX0, stScreenRect.height(), stScreenRect.width(), nCtrlBarHeight);
+        m_stTitleBarAnimationShow = QRect(nX0, 0, stScreenRect.width(), nTitleBarHeight);
+        m_stTitleBarAnimationHide = QRect(nX0, -nTitleBarHeight, stScreenRect.width(), nTitleBarHeight);
 
-        m_stPlayListAnimationShow = QRect(nX0, nTitleBarHeight, nPlaylistWidth, nPlayListHeight);
-        m_stPlayListAnimationHide = QRect(stScreenRect.width()-1, nTitleBarHeight,  nPlaylistWidth, nPlayListHeight);
+        m_stPlayListAnimationShow = QRect(nX1, nTitleBarHeight, nPlaylistWidth, nPlayListHeight);
+        m_stPlayListAnimationHide = QRect(nX0+stScreenRect.width()-1, nTitleBarHeight,  nPlaylistWidth, nPlayListHeight);
         m_stTitlebarAnimationShow = new QPropertyAnimation(ui->TitleWid, "geometry");
         m_stTitlebarAnimationHide = new QPropertyAnimation(ui->TitleWid, "geometry");
         m_stPlaylistAnimationShow = new QPropertyAnimation(ui->PlaylistWid, "geometry");
@@ -1441,6 +1443,7 @@ void MainWid::OnFullScreenPlay()
             m_stPlaylist.SetSelectedIndex(GlobalVars::currentPlayIndex());
         });
     }
+    this->setMinimumSize(m_bPlaylistVisible?500:453, 400);
     qDebug() << "恢复到窗口：" <<  GlobalHelper::subtitleWindow()->isVisible() << "定时器状态：" << GlobalHelper::subtitleWindow()->m_updateTimer.isActive() ;
 }
 
@@ -1561,6 +1564,13 @@ void MainWid::OnShowSettingWid()
     }
     m_stSettingWid.move(x, y);
     m_stSettingWid.show();
+}
+void MainWid::onLockSubtitle()
+{
+    m_bLockSubtitle = !m_bLockSubtitle;
+    GlobalVars::subtitleLockwindows() = m_bLockSubtitle;
+    ui->ShowWid->updateSubtitleWindowPosition();
+    ui->ShowWid->showInfo(m_bLockSubtitle?"字幕浮动：开":"字幕浮动：关");
 }
 void MainWid::onShowSubtitle()
 {
@@ -1826,6 +1836,12 @@ void MainWid::CreateDefaultMenu()
         m_stActShowSubtitle.setCheckable(true);
         m_stActShowSubtitle.setChecked(m_bShowSubtitle); // 默认勾选（显示）
         m_stMenu.addAction(&m_stActShowSubtitle);
+        m_stActLockSubtitle.setText("浮动字幕");
+            m_stActLockSubtitle.setCheckable(true);
+            m_stActLockSubtitle.setEnabled(m_bShowSubtitle);
+            m_stActLockSubtitle.setChecked(m_bLockSubtitle); // 默认勾选（显示）
+
+            m_stMenu.addAction(&m_stActLockSubtitle);
         // 置顶动作 - 新增
             m_stActAlwaysOnTop.setText("窗口置顶");
             m_stActAlwaysOnTop.setCheckable(true);
@@ -2074,7 +2090,7 @@ void MainWid::OnMaxBtnClicked()
             m_mainWinWidth = this->width();
             showMaximized();
             GlobalVars::getWinState()=1;
-            QScreen *pStCurScreen = qApp->screens().at(qApp->desktop()->screenNumber(this));
+            QScreen *pStCurScreen = qApp->screenAt(this->geometry().center());
             QRect stScteen = pStCurScreen->geometry();
             qDebug() << "最大化了，宽度：" << stScteen.width();
                 QList<int> sizes;
@@ -2175,7 +2191,7 @@ void MainWid::OnShowTime()
 // 正常窗口状态显示/隐藏播放列表
 void MainWid::showPlaylistNormal(bool show)
 {
-
+    this->setUpdatesEnabled(false);
     static int windowBorder = 4; // 窗口边框和边距
     if (show)
     {
@@ -2183,43 +2199,32 @@ void MainWid::showPlaylistNormal(bool show)
              // 显示播放列表
              qDebug() << "=== 显示播放列表 ===" << playlistWidth;
              // 保存当前视频区域宽度（隐藏时的状态）
-             int currentVideoWidth = ui->ShowWid->width();
-             int currentWindowWidth = this->width();
-             qDebug() << "当前状态 - 窗口:" << currentWindowWidth
-                      << "视频宽度:" << currentVideoWidth;
+             int currentVideoWidth = ui->ShowWid->width()-1;
+             qDebug() << "0当前状态 - 窗口this->width():" << this->width()
+                      << "视频宽度ui->ShowWid->width():" << ui->ShowWid->width();
                 video_width=currentVideoWidth;
                 // 显示播放列表
                 //ui->PlaylistWid->show();
                 if (m_splitter) {
-
                     // 获取手柄宽度
                     int handleWidth = m_splitter->handleWidth();
-
                     // 计算新窗口宽度
                     // 目标：视频区域 = 591，播放列表 = playlistWidth
-                    int newWindowWidth = video_width + playlistWidth + handleWidth + windowBorder;
-
+                    int newWindowWidth = video_width + playlistWidth + handleWidth + windowBorder+1;
                     // 强制分割器使用固定大小
                     QList<int> sizes;
                     sizes << video_width << playlistWidth;
                     m_splitter->setSizes(sizes);
                     m_splitter->widget(1)->show();
                     this->setGeometry(this->x(),this->y(), newWindowWidth, this->height());
-                    qDebug() << "计算新窗口宽度:" << newWindowWidth
-                             << " = 视频" << video_width
+                    qDebug() << "0计算新窗口宽度:" << newWindowWidth
+                             << " = 视频ui->ShowWid->width()" << ui->ShowWid->width()
                              << " + 播放列表" << playlistWidth
                              << " + 手柄" << handleWidth
                              << " + 边框" << windowBorder;
-
                     // 方法1：先调整窗口大小，再设置分割器
                    // this->resize(newWindowWidth, this->height());
-
-
-
-
                 }
-
-
                 GlobalHelper::SetIcon(ui->CtrlBarWid->findChild<QPushButton*>("PlaylistCtrlBtn"), 12, QChar(0xf03b));
                 m_bPlaylistVisible = true;
     }
@@ -2231,33 +2236,26 @@ void MainWid::showPlaylistNormal(bool show)
                 int savedVideoWidth = ui->ShowWid->width();
                 playlistWidth = savedPlaylistWidth;
 
-                qDebug() << "隐藏前 - 播放列表宽度:" << savedPlaylistWidth
-                         << "视频宽度:" << savedVideoWidth
+                qDebug() << "2隐藏前 - 播放列表宽度:" << savedPlaylistWidth
+                         << "视频宽度ui->ShowWid->width():" << ui->ShowWid->width()
                          << "当前窗口宽度:" << this->width()
                          << "窗口最小宽度:" << this->minimumWidth();
 
-                // 临时禁用窗口更新
-                //this->setUpdatesEnabled(false);
-                // 临时将最小宽度设置为0，允许窗口缩小
+               // 临时将最小宽度设置为0，允许窗口缩小
                // int oldMinWidth = this->minimumWidth();
                 // 3. 计算新窗口宽度
                 int newWindowWidth = savedVideoWidth + windowBorder;
                 if (m_splitter)m_splitter->widget(1)->hide();
-               this->setGeometry(this->x(),this->y(), newWindowWidth, this->height());
-                // 方法1：逐步调整
-                // 1. 先调整分割器
-                if (m_splitter) {
-                    // 先设置分割器尺寸
-                    QList<int> sizes;
-                    sizes << savedVideoWidth << 0;
-                    m_splitter->setSizes(sizes);
-                    m_splitter->widget(1)->hide();
-                }
-
+                this->setGeometry(this->x(),this->y(), newWindowWidth, this->height());
+                //resize(newWindowWidth, height());
+                qDebug() << "2隐藏后 - 播放列表宽度:" << ui->PlaylistWid->width()
+                         << "视频宽度ui->ShowWid->width():" << ui->ShowWid->width()
+                         << "当前窗口宽度:" << this->width()
+                         << "窗口最小宽度:" << this->minimumWidth();
                 m_bPlaylistVisible = false;
     }
     mainwin_width = this->width();
-    qDebug() << "m_bPlaylistVisible === " << m_bPlaylistVisible << "this->minimumWidth=" << this->minimumWidth() ;
+    this->setUpdatesEnabled(true);
 }
 
 // 最大化窗口状态显示/隐藏播放列表
@@ -2279,6 +2277,7 @@ void MainWid::showPlaylistMaximized(bool show)
         int videoWidth = totalWidth - playlistWidth;
         int playlistW = playlistWidth;
 
+
         // 确保控制面板与视频窗口同步收缩
         if (ui->CtrlBarWid) {
             ui->CtrlBarWid->setFixedWidth(videoWidth);
@@ -2294,7 +2293,8 @@ void MainWid::showPlaylistMaximized(bool show)
     }
     else
     {
-        playlistWidth = ui->PlaylistWid->width();
+        int savedPlaylistWidth = ui->PlaylistWid->width();
+        playlistWidth = savedPlaylistWidth;
         // 隐藏播放列表 - 视频恢复全宽
         ui->PlaylistWid->hide();
         m_splitter->widget(1)->hide();
@@ -2603,24 +2603,21 @@ void MainWid::HideFullscreenControls()
 void MainWid::changeEvent(QEvent *event)
 {
     if (!m_bFullScreenPlay){
-        if (event->type() == QEvent::ActivationChange){
-             GlobalVars::getWinState()= 0;
-        }else if (event->type() == QEvent::WindowStateChange){
+        if (event->type() == QEvent::ActivationChange && GlobalVars::getWinState() != 0){
+             GlobalVars::getWinState() = 0;//0:窗口，1：最大化 2:最小化,3:全屏后点击了最小化,4:全屏
+             ui->ShowWid->updateSubtitleWindowPosition();
+        }else if (event->type() == QEvent::WindowStateChange && GlobalVars::getWinState() != 2){
             GlobalVars::getWinState()= 2;
-            qDebug() << "窗口最小化了！" << GlobalVars::getWinState();
         }
     }
     if (m_bFullScreenPlay && GlobalVars::getWinState() >=2 ){
      if (event->type() == QEvent::ActivationChange){
-qDebug() << "2最小化恢复全屏,定时器激活状态：" <<  GlobalHelper::subtitleWindow()->m_updateTimer.isActive() << "字幕窗口：" << GlobalHelper::subtitleWindow()->isVisible();
           ui->PlaylistWid->setGeometry(m_stPlayListAnimationHide);
           //需要显示
-          qDebug() << "3最小化恢复到全屏，ui->TitleWid->y()" << ui->TitleWid->y();
           m_bFullscreenCtrlBarShow = false;
           UpdateMouseActivity();
           m_bPlaylistVisible = false;
      }else if (event->type() == QEvent::WindowStateChange){
-         qDebug() << "1全屏到最小化，定时器" <<  GlobalHelper::subtitleWindow()->m_updateTimer.isActive() << "字幕窗口：" << GlobalHelper::subtitleWindow()->isVisible();
          GlobalVars::getWinState()= 3;
      }
     }
@@ -2700,7 +2697,6 @@ void MainWid::onVideoSizeChanged(int width, int height)
 // 检查是否正在播放视频
 bool MainWid::isVideoPlaying() const
 {
-    qDebug() << "m_currentVideoWidth = " << m_currentVideoWidth << "m_currentVideoHeight = " << m_currentVideoHeight;
     // 检查是否有当前播放项且不是音频模式
     return (GlobalVars::currentPlayIndex() >= 0 &&
             GlobalVars::isVideoPlaying() &&
@@ -2813,6 +2809,7 @@ void MainWid::onSubtitleSettingsChanged(const QString& fontFamily, int fontSize)
     // 传递给Show控件
     if (ui->ShowWid) {
         ui->ShowWid->setSubtitleFont(fontFamily, fontSize);
+        ui->ShowWid->updateSubtitleWindowPosition();
     }
 
     qDebug() << "字幕设置已更新:" << fontFamily << fontSize;

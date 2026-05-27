@@ -27,6 +27,14 @@ this->setContentsMargins(0, 0, 0, 1);  // 左边1像素间距
     m_dLastVolumePercent = 1.0;
     // 初始化倍速列表
         m_speedList = {0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5};
+        QFont font = ui->speedBtn->font();
+            font.setPixelSize(16);   // ✅ 固定像素大小，不随 DPI 缩放
+            font.setFamily("FontAwesome");
+            ui->speedBtn->setFont(font);
+             font = ui->VideoTotalTimeTimeEdit->font();
+                font.setPixelSize(12);   // ✅ 固定像素大小，不随 DPI 缩放
+            ui->VideoTotalTimeTimeEdit->setFont(font);
+            ui->VideoPlayTimeTimeEdit->setFont(font);
 }
 
 CtrlBar::~CtrlBar()
@@ -403,8 +411,11 @@ void CtrlBar::on_Forward5Btn_clicked()
     else {if (GlobalVars::runState()==2 || !GlobalVars::isVideoPlaying())on_seekByPercent(5);}
     emit sigInfoMessage(QString("快进: %1秒").arg(QString::number((step), 'f', 1)));
 }
+bool m_isSeeking;
 void CtrlBar::OnPlaySliderValueChanged()
 {
+    if(m_isSeeking)return;
+    m_isSeeking = true;
     double dPercent = ui->PlaySlider->value()*1.0 / ui->PlaySlider->maximum();
     int targetSeconds = dPercent * m_nTotalPlaySeconds;
     GlobalVars::currentPlaytime() = dPercent * m_nTotalPlaySeconds;
@@ -413,13 +424,14 @@ void CtrlBar::OnPlaySliderValueChanged()
     ui->VideoPlayTimeTimeEdit->setTime(targetTime);
     emit SigPlaySeek(dPercent);
     emit sigInfoMessage(QString("跳转到了: %1").arg(GlobalVars::formatCustomTime(targetSeconds)));
-    qDebug() << " 跳转到了 ："<< targetTime << "GlobalHelper::getIsSeeking()--" << GlobalHelper::getIsSeeking();
+    //qDebug() << " 跳转到了 ："<< targetTime << "GlobalHelper::getIsSeeking()--" << GlobalHelper::getIsSeeking();
     // 通过全局变量清除字幕
         if (GlobalHelper::subtitleWindow()) {
             GlobalHelper::subtitleWindow()->setSubtitleText("");
         }
     QTimer::singleShot((GlobalHelper::getIsSeeking() == 3?300:50), this, []() {
         GlobalHelper::getIsSeeking() = 0;
+        m_isSeeking = false;
     });
 }
 void CtrlBar::OnVideoPlaySeconds(double nSeconds)

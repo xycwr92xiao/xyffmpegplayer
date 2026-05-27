@@ -13,6 +13,7 @@
 #include <QDebug>
 #include <QMutex>
 #include <QGraphicsDropShadowEffect>
+#include <QScreen>
 #include "show.h"
 #include "ui_show.h"
 #include "globalvars.h"
@@ -45,8 +46,6 @@ Show::Show(QWidget *parent) :
 
     this->setMouseTracking(true);
     
-
-
     m_nLastFrameWidth = 0; ///< 记录视频宽高
     m_nLastFrameHeight = 0;
 
@@ -152,7 +151,8 @@ Show::Show(QWidget *parent) :
             m_pInfoWindow->setKeepBackground(false);
             m_pInfoWindow->setHoverBgColor(QColor(0,0,0,0));
             m_pInfoWindow->setStrokeColor(QColor(20,20,20));//描边
-            m_pInfoWindow->setFontSize(12);
+            m_pInfoWindow->setFontSize(16);
+            m_pInfoWindow->setTextCenter(false);
             m_pInfoWindow->setFontFamily("Microsoft YaHei");
             m_pInfoWindow->hide();
             // 创建定时器（单次触发）
@@ -207,7 +207,8 @@ bool Show::Init()
 void Show::showInfo(const QString& text,int x,int y)
 {
     if (!m_pInfoWindow) return;
-    QFont font("Microsoft YaHei", 12, QFont::Bold);
+    QFont font("Microsoft YaHei", 16, QFont::Bold);
+    font.setPixelSize(16);//固定像素大小，不随 DPI 缩放
     QFontMetrics fm(font);
     tipIofoWinWidth = fm.horizontalAdvance(text)+x;
     int titleY =0;
@@ -220,7 +221,7 @@ void Show::showInfo(const QString& text,int x,int y)
         }
     // 设置文本并调整大小
     QPoint globalPos = mapToGlobal(QPoint(0, 0));
-    m_pInfoWindow->setPosition(globalPos.x()+x, globalPos.y()+(m_bAudioMode ?240:GlobalVars::getFullScreen()?titleY:0)+y, tipIofoWinWidth, 30);
+    m_pInfoWindow->setPosition(globalPos.x()+x+10, globalPos.y()+(m_bAudioMode ?240:GlobalVars::getFullScreen()?titleY:0)+y+5, tipIofoWinWidth, 30);
     m_pInfoWindow->setSubtitleText(text);
     m_pInfoWindow->show();
     m_pInfoWindow->raise();              // 确保显示在最上层
@@ -241,77 +242,158 @@ void Show::updateInfoWindowPosition()
     m_pInfoWindow->setPosition(globalPos.x()+10, globalPos.y()+ (m_bAudioMode ?250:10), tipIofoWinWidth, 30);
 
 }
-
+// 辅助函数：判断字符是否为优先断开字符（空格或指定的标点）
+auto isPreferredBreakChar = [](QChar ch) -> bool {
+    if (ch.isSpace()) return true;
+    // 英文标点
+    if (ch == '.' || ch == ',' || ch == '?' || ch == '!' || ch == ';' || ch == ':' || ch == '"') return true;
+    // 中文标点（全角）
+    if (ch == u'。' || ch == u'，' || ch == u'？' || ch == u'！' || ch == u'；' || ch == u'：' || ch == u'“' || ch == u' '
+            ) return true;
+    return false;
+};
 // 更新字幕窗口位置
 void Show::updateSubtitleWindowPosition()
 {
-    //qDebug() << "准备更新字幕窗口－当前位置 ：GlobalVars::getWinState() =---------------" << GlobalVars::getWinState();
     if (!m_pSubtitleWindow) return;
-    // 计算字幕窗口位置（底部居中）
+    int autoSize = GlobalVars::subtitleFontSize()==8?1:0;
+    // 1. 获取视频窗口位置和尺寸
     int windowWidth = this->width();
     int windowHeight = this->height();
+    QRect showRect;
     int fontSize;
     if (GlobalVars::getFullScreen()) {
-        // 全屏时，字体更大一些
-        fontSize = qMax(28, windowHeight / 20);
+        fontSize = qMax(28, windowHeight / 16);
+        showRect = this->geometry();
     } else {
-        fontSize = qMax(20, windowHeight / 25);
+        fontSize = qMax(20, windowHeight / 16);
+        QPoint globalPos = mapToGlobal(QPoint(0, 0));
+        showRect = QRect(globalPos, this->size());
     }
+
+    // 2. 如果当前字幕为空，隐藏窗口并返回
+    if (m_currentSubtitleText.isEmpty()) {
+        m_pSubtitleWindow->setSubtitleText("");
+        m_pSubtitleWindow->hide();
+        return;
+    }
+    if (GlobalVars::subtitleFontSize()>9){
+        fontSize=GlobalVars::subtitleFontSize();
+    }
+    m_pSubtitleWindow->m_fontSize = fontSize;
+    // 3. 设置字体
     m_pSubtitleWindow->setFontSize(fontSize);
-    int subtitleWidth = windowWidth * 0.8 <200 ? 200 :(windowWidth * 0.8);
-    int subtitleHeight = windowHeight * 0.14 <50 ? 50: windowHeight * 0.14;
-    int newY=m_pSubtitleWindow->y();
-    // 设置字幕窗口位置和大小
-        QFont font(GlobalVars::subtitleFontFamily(), m_pSubtitleWindow->m_fontSize, QFont::Bold);
-        QFontMetrics fm(font);
-        // 如果文本太长，换行
-        int maxWidth = width() *0.8;
-       // qDebug() << "text:" << m_currentSubtitleText << "fm.horizontalAdvance(text)" << fm.horizontalAdvance(m_currentSubtitleText) << " maxWidth:"<<  maxWidth;
-        if (fm.horizontalAdvance(m_currentSubtitleText) > maxWidth) {
-            qDebug() <<" 太长了，准备缩小字体！";
-            subtitleWidth = width()-20;
-                 int currentFontSize = m_pSubtitleWindow->m_fontSize;
-            while (fm.horizontalAdvance(m_currentSubtitleText) > width()-20){
-                //缩小字体
-                    currentFontSize--;
-                    QFont font(GlobalVars::subtitleFontFamily(), currentFontSize, QFont::Bold);
-                    QFontMetrics fm(font);
-                    if (fm.horizontalAdvance(m_currentSubtitleText) <= width()-20){
-                     m_pSubtitleWindow->m_fontSize = currentFontSize;
-                        break;}
+    QFont font;
+    font.setFamily(GlobalVars::subtitleFontFamily());
+    font.setPixelSize(fontSize);
+    font.setBold(true);
+    QFontMetrics fm(font);
+    // 4. 计算字幕最大宽度（窗口宽度的80%，并限制范围）
+    QScreen *pStCurScreen = qApp->screenAt(this->geometry().center());
+    QRect screenGeometry = pStCurScreen->availableGeometry();
+    int maxWidth = static_cast<int>(windowWidth * 0.9);
+    if (GlobalVars::subtitleLockwindows())maxWidth =screenGeometry.width() * 0.9;
+    else maxWidth = qBound(200, maxWidth, windowWidth - 40);
+
+    // 5. 手动换行：将长文本按宽度切分成多行，优先在空格处断开（中文按字符）
+    QStringList lines;
+    QString remaining = m_currentSubtitleText;
+    const int maxLines = 5; // 最大行数限制
+
+    while (fm.horizontalAdvance(remaining) > maxWidth && !remaining.isEmpty() && lines.size() < maxLines) {
+        int currentWidth = 0;
+        int splitPos = 0;
+        int lastSpacePos = -1;
+
+        // 遍历字符，累计宽度直到超过最大宽度
+        for (int i = 0; i < remaining.length(); ++i) {
+            QChar ch = remaining[i];
+            int charWidth = fm.horizontalAdvance(ch);
+            if (currentWidth + charWidth > maxWidth) {
+                break;
             }
-            QFont font(GlobalVars::subtitleFontFamily(), m_pSubtitleWindow->m_fontSize, QFont::Bold);
-            QFontMetrics fm(font);
-            m_pSubtitleWindow->setGeometry(10, newY, subtitleWidth, subtitleHeight);
-        }else m_pSubtitleWindow->setPosition(m_pSubtitleWindow->x(), newY, subtitleWidth, subtitleHeight);
-    int winState = GlobalVars::getWinState();
-        if (winState > 1 && !isReSizeWin) {
-            qDebug() << "2最小化，保持字幕窗口当前位置，不重新计算";
-            return;
+            currentWidth += charWidth;
+            splitPos = i + 1; // 可切分的位置（下一个字符的起始索引）
+            if (isPreferredBreakChar(ch)) {
+                lastSpacePos = splitPos; // 记录最后一个空格的位置
+            }
         }
-    // 获取当前窗口在屏幕上的位置
-    QPoint globalPos = mapToGlobal(QPoint(0, 0));
-    // 字幕窗口尺寸
-    // 计算位置
-    int x = globalPos.x() + (windowWidth - subtitleWidth) / 2;
-    int y = globalPos.y() + windowHeight - subtitleHeight - 10;
-    // 全屏模式下调整Y坐标，让字幕更靠上
-        if (GlobalVars::getFullScreen()) {
-            // 全屏时，让字幕距离底部有一定距离，避免被控制栏遮挡
-            int bottomMargin = 80;  // 调整这个值来改变字幕离底部的距离
-            y = globalPos.y() + windowHeight - subtitleHeight - bottomMargin;
-        } else {
-            // 窗口模式，距离底部10像素
-            int bottomMargin = 10;
-            y = globalPos.y() + windowHeight - subtitleHeight - bottomMargin;
+
+        // 如果找到了空格，优先在空格处切分（避免单词被截断）
+        if (lastSpacePos > 0 && lastSpacePos < remaining.length()) {
+            splitPos = lastSpacePos;
         }
-        m_pSubtitleWindow->setPosition(x, y, subtitleWidth, subtitleHeight);
-           // 根据窗口高度动态设置字体大小
+
+        // 如果一行都放不下（splitPos==0），强制放一个字符
+        if (splitPos == 0) {
+            splitPos = 1;
+        }
+
+        QString line = remaining.left(splitPos).trimmed();
+        if (!line.isEmpty()) {
+            lines.append(line);
+        }
+        remaining = remaining.mid(splitPos).trimmed();
+    }
+
+    // 如果还有剩余文本且未超过最大行数，附加为最后一行
+    if (!remaining.isEmpty() && lines.size() < maxLines) {
+        lines.append(remaining);
+    }
+     QString multiLineText;
+     if(autoSize ==1){
+         // 根据文本长度调整宽度和字体（保留原有逻辑）
+         int currentFontSize = m_pSubtitleWindow->m_fontSize;
+         QFont font1(GlobalVars::subtitleFontFamily(), m_pSubtitleWindow->m_fontSize, QFont::Bold);
+             QFontMetrics fm2(font1);
+             int textWidth = fm2.horizontalAdvance(m_currentSubtitleText);
+             if (textWidth > maxWidth) {
+                 maxWidth = windowWidth - 20;
+                 while (currentFontSize > 8) {
+                     QFont tempFont(GlobalVars::subtitleFontFamily(), currentFontSize, QFont::Bold);
+                     QFontMetrics tempFm(tempFont);
+                     if (tempFm.horizontalAdvance(m_currentSubtitleText) <= windowWidth - 20) {
+                         break;
+                     }
+                     currentFontSize--;
+                 }
+             }
+        m_pSubtitleWindow->m_fontSize = currentFontSize;
+        multiLineText = m_currentSubtitleText;
+     }else {
+        multiLineText = lines.join("\n");
+     }
+    // 6. 构建多行字符串（用换行符连接）
+    // 7. 计算窗口尺寸
+    int maxLineWidth = 0;
+    int lineHeight = fm.height();
+    for (const QString& line : lines) {
+        int lineWidth = fm.horizontalAdvance(line);
+        if (lineWidth > maxLineWidth) maxLineWidth = lineWidth;
+    }
+    int subtitleWidth =autoSize ==1? maxWidth+100: qMin(maxWidth, maxLineWidth + 80);      // 左右边距各10px
+    int subtitleHeight = (autoSize ==1?1:lines.size()) * lineHeight + 40;        // 上下边距各10px
+    subtitleHeight = qMin(subtitleHeight, windowHeight / 2);    // 限制最大高度
+
+    // 8. 计算位置（底部居中）
+    int x,y;
+    if((!GlobalVars::subtitleLockwindows() || m_pSubtitleWindow->x()==0) && GlobalVars::getWinState()!=2)
+     x = showRect.x() + (windowWidth - subtitleWidth) / 2;
+    else x = m_pSubtitleWindow->x();
+    int bottomMargin = GlobalVars::getFullScreen() ? 80 : 10;
+    if((!GlobalVars::subtitleLockwindows() || m_pSubtitleWindow->y()==0) && GlobalVars::getWinState()!=2)
+     y = showRect.y() + windowHeight - subtitleHeight - bottomMargin;
+    else y= m_pSubtitleWindow->y();
+    // 9. 设置窗口几何并显示多行文本
+    m_pSubtitleWindow->setPosition(x, y, subtitleWidth, subtitleHeight);
+    m_pSubtitleWindow->setSubtitleText(multiLineText);
+    m_pSubtitleWindow->show();
+    m_pSubtitleWindow->raise();
 }
 
 void Show::OnFrameDimensionsChanged(int nFrameWidth, int nFrameHeight)
 {
-    //qDebug() << "Show::OnFrameDimensionsChanged" << nFrameWidth << nFrameHeight;
+    qDebug() << "Show::OnFrameDimensionsChanged" << nFrameWidth << nFrameHeight;
     m_nLastFrameWidth = nFrameWidth;
     m_nLastFrameHeight = nFrameHeight;
     // 发射视频尺寸变化信号
@@ -388,7 +470,6 @@ void Show::resizeEvent(QResizeEvent *event)
         int infoHeight = m_nAudioInfoHeight;
         int x = (this->width() - infoWidth) / 2;
         int y = 10; // 顶部留10像素边距
-
         m_pAudioInfoWidget->setGeometry(x, y, infoWidth, infoHeight);
         m_pAudioInfoWidget->raise();
     }
@@ -398,6 +479,7 @@ void Show::resizeEvent(QResizeEvent *event)
             updateSubtitleWindowPosition();
             isReSizeWin = false;
         }
+//        qDebug() << "Show::width----------------------------------" << this->width();
         updateSpectrumDisplayArea();
 }
 
@@ -487,7 +569,7 @@ void Show::mouseMoveEvent(QMouseEvent *event)
                 mainWindow->move(m_WindowStartPos + delta);
 
                 // 拖动窗口时实时更新字幕位置
-                if (m_pSubtitleWindow && m_pSubtitleWindow->isVisible()) {
+                if (!GlobalVars::subtitleLockwindows() && m_pSubtitleWindow && m_pSubtitleWindow->isVisible()) {
                     updateSubtitleWindowPosition();
                 }
                 // 拖动窗口时实时更新字幕位置
@@ -794,7 +876,7 @@ void Show::paintEvent(QPaintEvent *event)
         // 绘制频谱标题
         painter.setPen(QColor(255, 255, 255));
         painter.setFont(QFont("Arial", 14, QFont::Bold));
-        QString title = "音频频谱";
+        //QString title = "音频频谱";
        // painter.drawText(width/2 - painter.fontMetrics().horizontalAdvance(title)/2,
                    //    spectrumY - 10, title);
 
@@ -888,8 +970,6 @@ void Show::OnUpdateSubtitle()
                 // 更新字幕窗口
                 if (m_pSubtitleWindow) {
                     updateSubtitleWindowPosition();
-                    m_pSubtitleWindow->setSubtitleText(subtitleText);
-                    qDebug() << "显示新字幕: " << subtitleText;
                 }
             }
         } else {
@@ -1127,44 +1207,6 @@ bool Show::eventFilter(QObject *obj, QEvent *event)
             }
         }
     }
-    // 处理父窗口（主窗口）移动事件
-//        if ("MainWid" == this->window()->objectName() && event->type() == QEvent::Move) {
-//            // 窗口移动时实时更新字幕窗口位置
-//            if (m_pSubtitleWindow && m_pSubtitleWindow->isVisible()) {
-//                updateSubtitleWindowPosition();
-//            }
-//        }
-        // 新增：处理父窗口隐藏和显示事件（对应最小化和恢复）
-//        if ("MainWid" == this->window()->objectName()) {
-//            if (GlobalVars::getWinState()==4 && (event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate)) {
-//                // 停止字幕定时器，防止重新显示
-//                if (m_pSubtitleTimer && m_pSubtitleTimer->isActive()) {
-//                    m_pSubtitleTimer->stop();
-//                    qDebug() << "停止字幕定时器";
-//                }
-
-//                if (m_pSubtitleWindow) {
-//                    m_pSubtitleWindow->hide();
-//                    qDebug() << "字幕窗口已隐藏";
-//                }
-//            } else if (event->type() == QEvent::Show || event->type() == QEvent::WindowActivate) {
-//                qDebug() << "Show::showSubtitleWindow 被调用";
-//                if (m_pSubtitleWindow && !m_currentSubtitleText.isEmpty()) {
-//                    // 如果之前定时器被停止，重新启动它
-//                    if (m_pSubtitleTimer && !m_pSubtitleTimer->isActive() && m_pSubtitle->hasSubtitles()) {
-//                        m_pSubtitleTimer->start();
-//                        qDebug() << "启动字幕定时器";
-//                    }
-
-//                    updateSubtitleWindowPosition();
-//                    m_pSubtitleWindow->show();
-//                    qDebug() << "字幕窗口已显示";
-//                } else {
-//                    qDebug() << "没有字幕内容，不显示字幕窗口";
-//                }
-
-//            }
-//        }
     return QWidget::eventFilter(obj, event);
 }
 #include <QMessageBox>

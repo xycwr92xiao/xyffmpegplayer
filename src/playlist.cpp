@@ -13,6 +13,7 @@
 #include <QMessageBox>
 #include <QFormLayout>
 #include <QLineEdit>
+#include <QScrollBar>
 #include "playlist.h"
 #include "ui_playlist.h"
 #include "globalhelper.h"
@@ -484,9 +485,12 @@ bool Playlist::ConnectSignalSlots()
        bRet = connect(ui->List, &MediaList::SigRemoveFile, this, [this](int index) {
            if (index >= 0 && index < ui->List->count()) {
                qDebug() << "移除了索引为： －－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－：" << index;
+               QScrollBar *vScrollBar = ui->List->verticalScrollBar();
+                   int oldScrollValue = vScrollBar ? vScrollBar->value() : 0;
                ui->List->takeItem(index);
                // 更新播放列表计数
-               GlobalVars::playlistCount() = ui->List->count();
+               int newCount = ui->List->count();
+               GlobalVars::playlistCount() = newCount;
                if (index == GlobalVars::currentPlayIndex()) {emit SigStop();
                    if (ui->List->count() !=0)
                    {if (index >= ui->List->count())index =ui->List->count()-1;
@@ -494,6 +498,24 @@ bool Playlist::ConnectSignalSlots()
                     if (index >= 0)PlayByIndex(index);
                    }
                }
+               // 对于非播放项的删除，需要重新设置高亮选中的行
+                       else {
+                           if (newCount > 0) {
+                               int newSelectedRow = index;
+                               bool lastIndex =false;
+                               if (newSelectedRow >= newCount) {
+                                   newSelectedRow = newCount - 1;   // 删除的是最后一项，选中新的最后一项
+                                   lastIndex =true;
+                               }
+                               ui->List->setCurrentRow(newSelectedRow);
+                               GlobalVars::selectedIndex() = newSelectedRow;
+                               if (lastIndex && vScrollBar) {
+                                   vScrollBar->setValue(oldScrollValue);
+                               }
+                           } else {
+                               GlobalVars::selectedIndex() = -1;
+                           }
+                       }
             updateButtonStates();
            }
        });
@@ -1245,7 +1267,10 @@ void Playlist::saveAllData()
     configData["playlistCount"] = ui->List->count();
     configData["autoPlay"] = GlobalHelper::GetAutoPlay();
     configData["currentPosition"] = GlobalVars::currentPlaytime();
-
+    m_settings.beginGroup("Subtitle");
+    m_settings.setValue("LockSubTitle", GlobalVars::subtitleLockwindows());
+    m_settings.endGroup();
+    m_settings.sync();
     // 3. 保存到统一的 JSON 文件
     QJsonDocument doc(configData);
     QByteArray jsonData = doc.toJson();

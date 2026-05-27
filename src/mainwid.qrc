@@ -9,6 +9,7 @@
         <file>res/qss/show.css</file>
         <file>res/qss/title.css</file>
         <file>res/menu.json</file>
+		<file>res/icons/down_arrow.svg</file>
 		<file>res/icons/mp3.svg</file>
 		<file>res/icons/wav.svg</file>
 		<file>res/icons/wma.svg</file>

@@ -15,7 +15,9 @@ public:
     QTimer m_updateTimer;
     bool m_bMouseHover;  // 鼠标是否悬停
     int m_fontSize;
+    bool m_bCenter = true;
     void setSubtitleText(const QString &text);
+    void setTextCenter(bool center);
     void setFontSize(int size);
     void setPosition(int x, int y, int width, int height);
     void setMouseHover(bool hover);

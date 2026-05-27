@@ -13,6 +13,7 @@ SettingWid::SettingWid(QWidget *parent)
     , m_currentHoverBgColor(QColor(0, 0, 0, 150))
     , m_currentLeaveBgColor(QColor(0, 0, 0, 100))
     , m_currentKeepBackground(false)
+    , m_currentMiaobianOrYinying(1)
 {
     ui.setupUi(this);
     setWindowModality(Qt::WindowModal);
@@ -20,9 +21,9 @@ SettingWid::SettingWid(QWidget *parent)
     // 设置为对话框样式
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
     setWindowFlags(windowFlags() | Qt::Tool);
-    resize(550, 600);  // 宽度500，高度600
+    resize(550, 650);  // 宽度500，高度600
     // 设置对话框的最小大小
-    setMinimumSize(450, 500);
+    setMinimumSize(450, 550);
     // 初始化UI
     initUI();
 
@@ -41,6 +42,7 @@ SettingWid::SettingWid(QWidget *parent)
     m_tempHoverBgColor = m_currentHoverBgColor;
     m_tempLeaveBgColor = m_currentLeaveBgColor;
     m_tempKeepBackground = m_currentKeepBackground;
+    m_tempMiaobianOrYinying = m_currentMiaobianOrYinying;
     // 最后确保预览更新
         updatePreview();
 }
@@ -53,7 +55,8 @@ void SettingWid::initUI()
 {
     // 填充字体列表
     populateFontFamilies();
-
+    ui.labelPreview->setStyleSheet("");  // 清除样式，避免冲突
+    ui.labelPreview->setScaledContents(false); // 不缩放，保持 pixmap 原始大小
     // 设置字号范围
     ui.spinFontSize->setRange(8, 72);
     ui.spinFontSize->setSingleStep(1);
@@ -78,6 +81,10 @@ void SettingWid::initUI()
         ui.sepMode3->setChecked(m_spectrumMode==2);
         ui.btnLeaveBgColor->setEnabled(m_currentKeepBackground);
         ui.labelLeaveBgColorDisplay->setEnabled(m_currentKeepBackground);
+        ui.checkMiaobian->setChecked(m_currentMiaobianOrYinying==1 || m_currentMiaobianOrYinying==3);
+        ui.checkYinying->setChecked(m_currentMiaobianOrYinying>1);
+        ui.labelPreview->setScaledContents(false);  // 保持预览图片原始大小
+        ui.labelPreview->setMinimumSize(512, 150);  // 可设定一个最小固定尺寸
     // 连接信号槽
     setupConnections();
 }
@@ -145,6 +152,10 @@ void SettingWid::setupConnections()
         // 复选框变化
         connect(ui.checkKeepBackground, &QCheckBox::stateChanged,
                 this, &SettingWid::onKeepBackgroundChanged);
+        connect(ui.checkMiaobian, &QCheckBox::stateChanged,
+                this, &SettingWid::onMiaobianChanged);
+        connect(ui.checkYinying, &QCheckBox::stateChanged,
+                this, &SettingWid::onYinyingChanged);
         connect(ui.sepMode1, &QRadioButton::clicked,
                 this, &SettingWid::onSpectrumModeChanged1);
         connect(ui.sepMode2, &QRadioButton::clicked,
@@ -172,6 +183,7 @@ void SettingWid::saveSettings()
     m_settings.setValue("HoverBgColor", m_currentHoverBgColor.name(QColor::HexArgb));
     m_settings.setValue("LeaveBgColor", m_currentLeaveBgColor.name(QColor::HexArgb));
     m_settings.setValue("KeepBackground", m_currentKeepBackground);
+    m_settings.setValue("MiaobianOrYinying", m_currentMiaobianOrYinying);
     m_settings.endGroup();
     m_settings.sync();
     qDebug() << "设置已保存：" << m_currentFontFamily << m_currentFontSize;
@@ -189,6 +201,7 @@ void SettingWid::loadSettings()
         m_currentHoverBgColor = QColor(m_settings.value("HoverBgColor", "#96000000").toString());
         m_currentLeaveBgColor = QColor(m_settings.value("LeaveBgColor", "#64000000").toString());
         m_currentKeepBackground = m_settings.value("KeepBackground", false).toBool();
+        m_currentMiaobianOrYinying = m_settings.value("MiaobianOrYinying", 1).toInt();
     m_settings.endGroup();
 
     // 更新UI
@@ -213,8 +226,11 @@ void SettingWid::loadSettings()
         updateColorLabel(ui.labelLeaveBgColorDisplay, m_currentLeaveBgColor);
 
         ui.checkKeepBackground->setChecked(m_currentKeepBackground);
+        ui.checkMiaobian->setChecked(m_currentMiaobianOrYinying==1 || m_currentMiaobianOrYinying==3);
+        ui.checkYinying->setChecked(m_currentMiaobianOrYinying>1);
         ui.btnLeaveBgColor->setEnabled(m_currentKeepBackground);
         ui.labelLeaveBgColorDisplay->setEnabled(m_currentKeepBackground);
+
     // 更新预览
     updatePreview();
 }
@@ -251,6 +267,10 @@ QColor SettingWid::getSubtitleLeaveBgColor() const
 bool SettingWid::getSubtitleKeepBackground() const
 {
     return m_currentKeepBackground;
+}
+int SettingWid::getMiaobianOrYinying() const
+{
+    return m_currentMiaobianOrYinying;
 }
 void SettingWid::setSubtitleFont(const QString &family, int size)
 {
@@ -445,6 +465,18 @@ void SettingWid::onKeepBackgroundChanged(int state)
     updatePreview();
     ui.btnApply->setEnabled(true);
 }
+void SettingWid::onMiaobianChanged(int state)
+{
+    m_tempMiaobianOrYinying = (state == Qt::Checked)?(m_tempMiaobianOrYinying <=1?1:3):(m_tempMiaobianOrYinying ==3?2:0);
+    updatePreview();
+    ui.btnApply->setEnabled(true);
+}
+void SettingWid::onYinyingChanged(int state)
+{
+m_tempMiaobianOrYinying = (state == Qt::Checked)?(m_tempMiaobianOrYinying % 2 == 0?2:3):(m_tempMiaobianOrYinying % 2 == 0?0:1);
+    updatePreview();
+    ui.btnApply->setEnabled(true);
+}
 void SettingWid::onSpectrumModeChanged1()
 {
     m_tempspectrumMode = 0;
@@ -462,46 +494,119 @@ void SettingWid::onSpectrumModeChanged3()
 }
 void SettingWid::updatePreview()
 {
-    // 获取当前选择的字体
-        QString fontFamily = ui.comboFontFamily->currentText();
-        int fontSize = ui.spinFontSize->value();
-       // 检查字体是否可用
-        QFontDatabase fontDb;
-        if (!fontDb.families().contains(fontFamily)) {
-            qDebug() << "警告: 字体" << fontFamily << "不在系统字体列表中!";
+    // 固定预览区域大小（使用 labelPreview 当前尺寸）
+    QSize fixedSize = ui.labelPreview->size();
+    if (fixedSize.width() <= 0 || fixedSize.height() <= 0) {
+        fixedSize = QSize(512, 150); // 后备尺寸
+    }
+
+    // 创建画布
+    QPixmap pixmap(fixedSize);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setRenderHint(QPainter::TextAntialiasing, true);
+
+    // 动态背景色：如果描边颜色与背景色太接近，使用更亮的预览背景
+        QColor bgColor = m_tempLeaveBgColor;
+        QColor strokeColor = m_tempStrokeColor;
+        // 计算颜色差异（简单欧氏距离）
+        int dr = bgColor.red() - strokeColor.red();
+        int dg = bgColor.green() - strokeColor.green();
+        int db = bgColor.blue() - strokeColor.blue();
+        int diff = qAbs(dr) + qAbs(dg) + qAbs(db);
+        if (diff < 60) { // 阈值60，可调整
+            // 动态生成一个与描边颜色不同的亮色背景
+            int r = qMin(255, strokeColor.red() + 100);
+            int g = qMin(255, strokeColor.green() + 100);
+            int b = qMin(255, strokeColor.blue() + 100);
+            bgColor = QColor(r, g, b);
         }
-        // 创建字体并检查是否支持中文
-        QFont font(fontFamily, fontSize);
-        QFontInfo fontInfo(font);
+        // ------------------------------------------------------------------
 
-        // 设置预览标签的字体
-        ui.labelPreview->setFont(font);
+        // 绘制背景色（使用可能调整后的背景）
+        painter.fillRect(pixmap.rect(), bgColor);
 
-        // 构建预览文本 - 包含中英文
-        QString previewText = QString("字体预览: %1\n").arg(fontFamily);
-        previewText += "中文字体测试: 你好，世界！\n";
-        previewText += "English Test: Hello World!";
-        //previewText += QString("字号: %1px").arg(fontSize);
+    // 绘制边框（使用描边颜色）
+    painter.setPen(QPen(m_tempStrokeColor, 2));
+    painter.drawRoundedRect(pixmap.rect().adjusted(1, 1, -1, -1), 4, 4);
 
-        ui.labelPreview->setText(previewText);
+    // 字体设置
+    QString fontFamily = ui.comboFontFamily->currentText();
+    int fontSize = ui.spinFontSize->value();
+    if (fontSize <= 9) fontSize = 16;
+    QFont font;
+    font.setFamily(fontFamily);
+    font.setPixelSize(fontSize);
+    font.setBold(true);
+    painter.setFont(font);
 
-        // 应用样式
-        QString style = QString("QLabel { "
-                               "padding: 0px; "
-                               "border: 2px solid %1; "
-                               "border-radius: 4px; "
-                               "background-color: %2; "
-                               "color: %3; "
-                               "font-family: \"%4\"; "
-                               "font-size: %5px; "
-                               "}")
-                               .arg(m_tempStrokeColor.name(QColor::HexArgb))
-                               .arg(m_tempLeaveBgColor.name(QColor::HexArgb))
-                               .arg(m_tempTextColor.name(QColor::HexArgb))
-                               .arg(fontFamily)  // 确保字体名称被引用
-                               .arg(fontSize);
+    // 预览文本
+    QString previewText = QString("字体预览: %1\n").arg(fontFamily);
+    previewText += "中文: 8像素（单行/自适应）9-72（多行/9自动）\n";
+    previewText += "English Test: Hello World!";
 
-        ui.labelPreview->setStyleSheet(style);
+    // 按行分割
+    QStringList lines = previewText.split('\n');
+
+    QFontMetrics fm(font);
+    int lineHeight = fm.height();
+    int totalHeight = lines.size() * lineHeight;
+
+    // 绘制区域（内边距）
+    int padding = 8;
+    QRect textRect = pixmap.rect().adjusted(padding, padding, -padding, -padding);
+    painter.setClipRect(textRect);
+
+    // 垂直居中起始Y坐标
+    int startY = textRect.top() + (textRect.height() - totalHeight) / 2;
+
+    // 绘制一行的辅助函数
+    auto drawLine = [&](const QString &line, int x, int y, int isShadow) {
+        if (isShadow ==0){
+            painter.setPen(m_tempTextColor);
+            painter.drawText(x, y, line);
+        }
+        else{
+        if (isShadow>1) {
+            // 阴影效果：偏移 (2,2)，使用半透明的描边颜色
+            int offsetX = 2, offsetY = 2;
+            painter.setPen(QColor(0, 0, 0, 128));
+            painter.drawText(x + offsetX, y + offsetY, line);
+            // 主文字
+            painter.setPen(m_tempTextColor);
+            painter.drawText(x, y, line);
+        }
+        if (isShadow==1 || isShadow ==3){
+            // 描边效果：8方向偏移模拟轮廓
+            QColor strokeColor = m_tempStrokeColor;
+            painter.setPen(Qt::NoPen);
+            for (int dx = -1; dx <= 1; ++dx) {
+                for (int dy = -1; dy <= 1; ++dy) {
+                    if (dx == 0 && dy == 0) continue;
+                    painter.setPen(QPen(strokeColor, 2));
+                    painter.drawText(x + dx, y + dy, line);
+                }
+            }
+            // 主文字
+            painter.setPen(QPen(m_tempTextColor, 1));
+            painter.drawText(x, y, line);
+        }
+        }
+    };
+
+    // 逐行绘制，水平居中，不换行，超出裁剪
+    for (int i = 0; i < lines.size(); ++i) {
+        QString line = lines[i];
+        if (line.isEmpty()) continue;
+        int lineWidth = fm.horizontalAdvance(line);
+        int x = textRect.left() + (textRect.width() - lineWidth) / 2;
+        int y = startY + i * lineHeight + fm.ascent();
+        drawLine(line, x, y, m_tempMiaobianOrYinying);
+    }
+    painter.end();
+    ui.labelPreview->setPixmap(pixmap);
 }
 
 void SettingWid::onApplyClicked()
@@ -514,7 +619,7 @@ void SettingWid::onApplyClicked()
     m_currentHoverBgColor = m_tempHoverBgColor;
     m_currentLeaveBgColor = m_tempLeaveBgColor;
     m_currentKeepBackground = m_tempKeepBackground;
-
+    m_currentMiaobianOrYinying = m_tempMiaobianOrYinying;
     m_spectrumMode = m_tempspectrumMode;
     qDebug() << "m_tempspectrumMode = " << m_tempspectrumMode;
     // 保存到配置文件
@@ -530,7 +635,7 @@ void SettingWid::onApplyClicked()
     GlobalVars::subtitleHoverBgColor() = m_currentHoverBgColor;
     GlobalVars::subtitleLeaveBgColor() = m_currentLeaveBgColor;
     GlobalVars::subtitleKeepBackground() = m_currentKeepBackground;
-
+    GlobalVars::miaobianOrYinying() = m_currentMiaobianOrYinying;
     // 发送设置变化信号
     emit subtitleSettingsChanged(m_currentFontFamily, m_currentFontSize);
     emit subtitleColorSettingsChanged(m_currentTextColor, m_currentStrokeColor,
@@ -539,7 +644,7 @@ void SettingWid::onApplyClicked()
 
     ui.btnApply->setEnabled(false);
 
-    qDebug() << "设置已应用：GlobalVars::spectrumMode()" << GlobalVars::spectrumMode() << "m_spectrumMode" << m_spectrumMode;
+    qDebug() << "设置已应用：GlobalVars::miaobianOrYinying()=========================" << GlobalVars::miaobianOrYinying() <<":"<< m_currentMiaobianOrYinying;
     qDebug() << "颜色设置已应用：" << m_currentTextColor << m_currentStrokeColor;
 }
 
@@ -553,7 +658,7 @@ void SettingWid::onCancelClicked()
     m_tempHoverBgColor = m_currentHoverBgColor;
     m_tempLeaveBgColor = m_currentLeaveBgColor;
     m_tempKeepBackground = m_currentKeepBackground;
-
+    m_tempMiaobianOrYinying = m_currentMiaobianOrYinying;
     // 更新UI
     int fontIndex = ui.comboFontFamily->findText(m_currentFontFamily);
     if (fontIndex >= 0) {

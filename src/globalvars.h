@@ -24,7 +24,7 @@ public:
         return subtitleFontFamily;
     }
     static int& subtitleFontSize(){
-       static int subtitleFontSize = 16;
+       static int subtitleFontSize = 9;
         return subtitleFontSize;
     }
     static QColor& subtitleTextColor() {
@@ -50,6 +50,14 @@ public:
     static bool& subtitleKeepBackground() {
         static bool keep = false;
         return keep;
+    }
+    static bool& subtitleLockwindows() {
+        static bool lockwin = false;
+        return lockwin;
+    }
+    static int& miaobianOrYinying() {
+        static int yinying = 0;//0:无，1：描边 2:阴影,3:描边+阴影
+        return yinying;
     }
     // 获取当前播放索引的引用
     static int& currentPlayIndex()

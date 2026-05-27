@@ -212,7 +212,7 @@
       <widget class="QPushButton" name="speedBtn">
        <property name="minimumSize">
         <size>
-         <width>30</width>
+         <width>90</width>
          <height>30</height>
         </size>
        </property>

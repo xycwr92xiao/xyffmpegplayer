@@ -154,12 +154,6 @@ void Title::mouseDoubleClickEvent(QMouseEvent *event)
     }
 }
 
-void Title::resizeEvent(QResizeEvent *event)
-{
-    qDebug() << event;
-    //ChangeMovieNameShow();
-}
-
 // void Title::mouseMoveEvent(QMouseEvent *event)
 // {
 //     qDebug() << "Title::mouseMoveEvent";

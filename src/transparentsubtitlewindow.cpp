@@ -28,7 +28,7 @@ TransparentSubtitleWindow::TransparentSubtitleWindow(QWidget *parent)
     setMouseTracking(true);
     // 设置窗口标志
     updateWindowFlags();
-
+    updateBackgroundAlpha();
     // 设置样式
     setStyleSheet("background-color: transparent; border: none;");
     //setStyleSheet("background-color: rgba(0, 0, 0, 0.5); border: 1px ;");
@@ -69,6 +69,13 @@ void TransparentSubtitleWindow::setFontSize(int size)
 {
     if (m_fontSize != size && size > 0) {
         m_fontSize = size;
+        update();
+    }
+}
+void TransparentSubtitleWindow::setTextCenter(bool center)
+{
+    if (m_bCenter != center) {
+        m_bCenter = center;
         update();
     }
 }
@@ -189,37 +196,11 @@ void TransparentSubtitleWindow::paintEvent(QPaintEvent *event)
 
 //    // 设置字体
     QFont font(m_fontFamily.isEmpty() ? "Microsoft YaHei" : m_fontFamily, m_fontSize, QFont::Bold);
+    font.setPixelSize(m_fontSize);//固定像素大小，不随 DPI 缩放
     painter.setFont(font);
 
 //    // 计算文本尺寸
     QFontMetrics fm(font);
-    //QString displayText = m_subtitleText;
-
-//    // 如果文本太长，换行
-//    int maxWidth = width() - 10;
-//    if (fm.horizontalAdvance(displayText) > maxWidth) {
-//        qDebug() << "准备分行显示：fm.horizontalAdvance(displayText)" << fm.horizontalAdvance(displayText) << "maxWidth : " << maxWidth;
-//        QStringList lines;
-//        QString currentLine;
-//        QStringList words = displayText.split(' ');
-
-//        for (const QString &word : words) {
-//            QString testLine = currentLine.isEmpty() ? word : currentLine + " " + word;
-//            if (fm.horizontalAdvance(testLine) <= maxWidth) {
-//                currentLine = testLine;
-//            } else {
-//                if (!currentLine.isEmpty()) {
-//                    lines.append(currentLine);
-//                }
-//                currentLine = word;
-//            }
-//        }
-//        if (!currentLine.isEmpty()) {
-//            lines.append(currentLine);
-//        }
-//        displayText = lines.join('\n');
-//        qDebug() << "displayText:" << displayText;
-//    }
 
     // 绘制文本（带描边）
         int lineHeight = QFontMetrics(font).height();
@@ -230,16 +211,21 @@ void TransparentSubtitleWindow::paintEvent(QPaintEvent *event)
     for (int i = 0; i < lines.size(); i++) {
         QString line = lines[i];
         int textWidth = QFontMetrics(font).horizontalAdvance(line);
-        int x = (width() - textWidth) / 2;
+        int x = m_bCenter ? (width() - textWidth) / 2:2;
         int y = startY + i * lineHeight;
-
         // 绘制描边
-        painter.setPen(QPen(m_strokeColor, 4));
-        painter.drawText(x-1, y, line);
-        painter.drawText(x+1, y, line);
-        painter.drawText(x, y-1, line);
-        painter.drawText(x, y+1, line);
-
+        if(GlobalVars::miaobianOrYinying()==1 || GlobalVars::miaobianOrYinying()==3){
+            painter.setPen(QPen(m_strokeColor, 4));
+            painter.drawText(x-1, y, line);
+            painter.drawText(x+1, y, line);
+            painter.drawText(x, y-1, line);
+            painter.drawText(x, y+1, line);
+        }
+        if(GlobalVars::miaobianOrYinying()==2 || GlobalVars::miaobianOrYinying()==3) {//阴影效果
+            painter.setPen(QColor(0, 0, 0, 170));
+            painter.drawText(x+2, y+2, line);
+            painter.drawText(x+1, y+1, line);
+        }
         // 绘制文字
         painter.setPen(m_textColor);
         painter.drawText(x, y, line);
@@ -349,7 +335,7 @@ void TransparentSubtitleWindow::mouseMoveEvent(QMouseEvent *event)
     if (m_bDrag && (event->buttons() & Qt::LeftButton))
     {
         QPoint delta = event->globalPos() - m_DragStartPos;
-        move(pos() + delta);
+        if(GlobalVars::subtitleLockwindows() || GlobalVars::getWinState()==2)move(pos() + delta);
         m_DragStartPos = event->globalPos();
 
         event->accept();

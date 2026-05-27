@@ -102,6 +102,7 @@ private:
     int m_nTotalPlaySeconds;
     double m_dLastVolumePercent;
     double m_nSeconds=0;
+    //bool m_isSeeking = false;
 };
 
 #endif // CTRLBAR_H

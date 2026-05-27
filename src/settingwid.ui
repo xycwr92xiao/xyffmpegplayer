@@ -66,8 +66,9 @@ QComboBox::drop-down {
 
 QComboBox::down-arrow {
     image: url(:/res/icons/down_arrow.svg);
-    width: 12px;
-    height: 12px;
+    padding-right: 15px;
+    width: 24px;
+    height: 16px;
 }
 
 QComboBox QAbstractItemView {
@@ -140,43 +141,6 @@ QCheckBox::indicator {
       <string>字幕设置</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="1" column="2">
-       <widget class="QSpinBox" name="spinFontSize">
-        <property name="suffix">
-         <string> 像素</string>
-        </property>
-        <property name="minimum">
-         <number>8</number>
-        </property>
-        <property name="maximum">
-         <number>72</number>
-        </property>
-        <property name="value">
-         <number>16</number>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="labelHoverBgColor">
-        <property name="text">
-         <string>悬停背景色：</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="labelTextColor">
-        <property name="text">
-         <string>文字颜色：</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="2">
-       <widget class="QComboBox" name="comboFontFamily">
-        <property name="editable">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="0">
        <widget class="QLabel" name="labelFontFamily">
         <property name="text">
@@ -184,31 +148,7 @@ QCheckBox::indicator {
         </property>
        </widget>
       </item>
-      <item row="7" column="0" colspan="3">
-       <widget class="QLabel" name="labelPreview">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>100</height>
-         </size>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">QLabel {
-    padding: 10px;
-    border: 1px solid #555555;
-    border-radius: 4px;
-    background-color: rgba(0, 0, 0, 0.3);
-}</string>
-        </property>
-        <property name="text">
-         <string>预览：这是一个字幕预览示例</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="6" column="2">
+      <item row="6" column="3">
        <layout class="QHBoxLayout" name="horizontalLayout_LeaveBgColor">
         <item>
          <widget class="QPushButton" name="btnLeaveBgColor">
@@ -232,88 +172,14 @@ QCheckBox::indicator {
         </item>
        </layout>
       </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="labelStrokeColor">
-        <property name="text">
-         <string>描边颜色：</string>
+      <item row="0" column="3">
+       <widget class="QComboBox" name="comboFontFamily">
+        <property name="editable">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
-      <item row="4" column="2">
-       <layout class="QHBoxLayout" name="horizontalLayout_HoverBgColor">
-        <item>
-         <widget class="QPushButton" name="btnHoverBgColor">
-          <property name="styleSheet">
-           <string notr="true">background-color: rgba(0, 0, 0, 150);</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="flat">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="labelHoverBgColorDisplay">
-          <property name="text">
-           <string>半透黑</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item row="6" column="0">
-       <widget class="QLabel" name="labelLeaveBgColor">
-        <property name="minimumSize">
-         <size>
-          <width>200</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>200</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>离开背景色：</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="labelFontSize">
-        <property name="text">
-         <string>字号：</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="2">
-       <layout class="QHBoxLayout" name="horizontalLayout_StrokeColor">
-        <item>
-         <widget class="QPushButton" name="btnStrokeColor">
-          <property name="styleSheet">
-           <string notr="true">background-color: black;</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="flat">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="labelStrokeColorDisplay">
-          <property name="text">
-           <string>黑色</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item row="2" column="2">
+      <item row="2" column="3">
        <layout class="QHBoxLayout" name="horizontalLayout_TextColor">
         <item>
          <widget class="QPushButton" name="btnTextColor">
@@ -337,8 +203,169 @@ QCheckBox::indicator {
         </item>
        </layout>
       </item>
-      <item row="6" column="1">
+      <item row="7" column="0" colspan="4">
+       <widget class="QLabel" name="labelPreview">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>100</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QLabel {
+    padding: 10px;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.3);
+}</string>
+        </property>
+        <property name="text">
+         <string>预览：这是一个字幕预览示例</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="labelTextColor">
+        <property name="text">
+         <string>文字颜色：</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="2">
        <widget class="QCheckBox" name="checkKeepBackground">
+        <property name="maximumSize">
+         <size>
+          <width>30</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QSpinBox" name="spinFontSize">
+        <property name="suffix">
+         <string> 像素</string>
+        </property>
+        <property name="minimum">
+         <number>8</number>
+        </property>
+        <property name="maximum">
+         <number>72</number>
+        </property>
+        <property name="value">
+         <number>16</number>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="0">
+       <widget class="QLabel" name="labelLeaveBgColor">
+        <property name="minimumSize">
+         <size>
+          <width>200</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>200</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>离开背景色：</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="labelStrokeColor">
+        <property name="text">
+         <string>描边/阴影：</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="3">
+       <layout class="QHBoxLayout" name="horizontalLayout_StrokeColor">
+        <item>
+         <widget class="QPushButton" name="btnStrokeColor">
+          <property name="styleSheet">
+           <string notr="true">background-color: black;</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="flat">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelStrokeColorDisplay">
+          <property name="text">
+           <string>黑色</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="3" column="2">
+       <widget class="QCheckBox" name="checkYinying">
+        <property name="maximumSize">
+         <size>
+          <width>30</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="3">
+       <layout class="QHBoxLayout" name="horizontalLayout_HoverBgColor">
+        <item>
+         <widget class="QPushButton" name="btnHoverBgColor">
+          <property name="styleSheet">
+           <string notr="true">background-color: rgba(0, 0, 0, 150);</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="flat">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelHoverBgColorDisplay">
+          <property name="text">
+           <string>半透黑</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="labelFontSize">
+        <property name="text">
+         <string>字号：</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="labelHoverBgColor">
+        <property name="text">
+         <string>悬停背景色：</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QCheckBox" name="checkMiaobian">
         <property name="maximumSize">
          <size>
           <width>30</width>
