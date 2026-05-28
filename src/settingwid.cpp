@@ -1,5 +1,6 @@
 #include "settingwid.h"
 #include <QDebug>
+#include <QScreen>
 #include <QMessageBox>
 #include <QFontDatabase>
 #include <QColorDialog>
@@ -21,9 +22,18 @@ SettingWid::SettingWid(QWidget *parent)
     // 设置为对话框样式
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
     setWindowFlags(windowFlags() | Qt::Tool);
-    resize(550, 650);  // 宽度500，高度600
+    qreal scale = 1.0;
+        if (QScreen *screen = this->screen()) {
+            scale = screen->logicalDotsPerInch() / 96.0;
+        } else if (QScreen *primaryScreen = QGuiApplication::primaryScreen()) {
+            scale = primaryScreen->logicalDotsPerInch() / 96.0;
+        }
+        qDebug() << "scale =------------------------------------------------------------ " << scale;
+    int nHeight = scale==1?620:(scale==1.25?650:(scale==1.5?690:720));
+    int nWidth = scale==1?550:(scale==1.25?560:(scale==1.5?570:580));
+    resize(nWidth, nHeight);  // 宽度500，高度600
     // 设置对话框的最小大小
-    setMinimumSize(450, 550);
+    setMinimumSize(550, 600);
     // 初始化UI
     initUI();
 
@@ -44,7 +54,7 @@ SettingWid::SettingWid(QWidget *parent)
     m_tempKeepBackground = m_currentKeepBackground;
     m_tempMiaobianOrYinying = m_currentMiaobianOrYinying;
     // 最后确保预览更新
-        updatePreview();
+    updatePreview();
 }
 
 SettingWid::~SettingWid()
@@ -84,11 +94,16 @@ void SettingWid::initUI()
         ui.checkMiaobian->setChecked(m_currentMiaobianOrYinying==1 || m_currentMiaobianOrYinying==3);
         ui.checkYinying->setChecked(m_currentMiaobianOrYinying>1);
         ui.labelPreview->setScaledContents(false);  // 保持预览图片原始大小
-        ui.labelPreview->setMinimumSize(512, 150);  // 可设定一个最小固定尺寸
+        ui.labelPreview->setMinimumHeight(190);        // 确保即使在窗口最小时也能显示足够内容
+            ui.labelPreview->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     // 连接信号槽
     setupConnections();
 }
-
+void SettingWid::resizeEvent(QResizeEvent *event)
+{
+    QDialog::resizeEvent(event);
+    updatePreview();
+}
 void SettingWid::populateFontFamilies()
 {
     ui.comboFontFamily->clear();
@@ -232,7 +247,7 @@ void SettingWid::loadSettings()
         ui.labelLeaveBgColorDisplay->setEnabled(m_currentKeepBackground);
 
     // 更新预览
-    updatePreview();
+    //updatePreview();
 }
 
 QString SettingWid::getSubtitleFontFamily() const
@@ -268,10 +283,7 @@ bool SettingWid::getSubtitleKeepBackground() const
 {
     return m_currentKeepBackground;
 }
-int SettingWid::getMiaobianOrYinying() const
-{
-    return m_currentMiaobianOrYinying;
-}
+
 void SettingWid::setSubtitleFont(const QString &family, int size)
 {
     m_currentFontFamily = family;
@@ -494,48 +506,58 @@ void SettingWid::onSpectrumModeChanged3()
 }
 void SettingWid::updatePreview()
 {
-    // 固定预览区域大小（使用 labelPreview 当前尺寸）
-    QSize fixedSize = ui.labelPreview->size();
-    if (fixedSize.width() <= 0 || fixedSize.height() <= 0) {
-        fixedSize = QSize(512, 150); // 后备尺寸
-    }
-
-    // 创建画布
-    QPixmap pixmap(fixedSize);
+    // 1. 获取预览控件的逻辑尺寸（固定为 512x154，避免布局影响）
+    QSize physicalSize(this->width()-38, 154);
+    ui.labelPreview->setFixedSize(physicalSize);          // 固定大小
+    ui.labelPreview->setScaledContents(false);        // 禁止缩放
+    // 2. 获取设备像素比（例如 125% -> 1.25）
+    // 3. 创建高分辨率 Pixmap 并设置设备像素比
+    QPixmap pixmap(physicalSize);
+    pixmap.setDevicePixelRatio(1);
     pixmap.fill(Qt::transparent);
 
     QPainter painter(&pixmap);
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setRenderHint(QPainter::TextAntialiasing, true);
 
-    // 动态背景色：如果描边颜色与背景色太接近，使用更亮的预览背景
-        QColor bgColor = m_tempLeaveBgColor;
-        QColor strokeColor = m_tempStrokeColor;
-        // 计算颜色差异（简单欧氏距离）
-        int dr = bgColor.red() - strokeColor.red();
-        int dg = bgColor.green() - strokeColor.green();
-        int db = bgColor.blue() - strokeColor.blue();
-        int diff = qAbs(dr) + qAbs(dg) + qAbs(db);
-        if (diff < 60) { // 阈值60，可调整
-            // 动态生成一个与描边颜色不同的亮色背景
-            int r = qMin(255, strokeColor.red() + 100);
-            int g = qMin(255, strokeColor.green() + 100);
-            int b = qMin(255, strokeColor.blue() + 100);
-            bgColor = QColor(r, g, b);
-        }
-        // ------------------------------------------------------------------
+    // 4. 动态调整背景色（保留你的原逻辑）
+    QColor bgColor = m_tempLeaveBgColor;
+    QColor strokeColor = m_tempStrokeColor;
+    int dr = bgColor.red() - strokeColor.red();
+    int dg = bgColor.green() - strokeColor.green();
+    int db = bgColor.blue() - strokeColor.blue();
+    if (qAbs(dr) + qAbs(dg) + qAbs(db) < 60) {
+        int r = qMin(255, strokeColor.red() + 70);
+        int g = qMin(255, strokeColor.green() + 70);
+        int b = qMin(255, strokeColor.blue() + 70);
+        bgColor = QColor(r, g, b);
+    }
 
-        // 绘制背景色（使用可能调整后的背景）
-        painter.fillRect(pixmap.rect(), bgColor);
+    // 5. 定义绘制区域（距离边缘保留 4 物理像素的安全边距）
+    int safeMargin = 4;            // 物理像素边距
+    QRectF drawRect = QRectF(QPointF(0,0), physicalSize).adjusted(safeMargin, safeMargin, -safeMargin, -safeMargin);
+    qreal radius = 8;              // 圆角半径随 DPI 缩放
 
-    // 绘制边框（使用描边颜色）
+    // 6. 绘制背景（仅限圆角矩形内部）
+    QPainterPath path;
+    path.addRoundedRect(drawRect, radius, radius);
+    painter.setClipPath(path);
+    painter.fillRect(drawRect, bgColor);
+
+    // 7. 绘制边框（线宽 2 物理像素）
+    painter.setClipRect(pixmap.rect());   // 恢复裁剪区域
     painter.setPen(QPen(m_tempStrokeColor, 2));
-    painter.drawRoundedRect(pixmap.rect().adjusted(1, 1, -1, -1), 4, 4);
+    painter.drawRoundedRect(drawRect, radius, radius);
+
+    // 8. 绘制文本（在边框内部再留内边距）
+    int textPadding = 8;
+    QRectF textRect = drawRect.adjusted(textPadding, textPadding, -textPadding, -textPadding);
+    painter.setClipRect(textRect);
 
     // 字体设置
     QString fontFamily = ui.comboFontFamily->currentText();
     int fontSize = ui.spinFontSize->value();
-    if (fontSize <= 9) fontSize = 16;
+    if (fontSize <= 9) fontSize = 29;
     QFont font;
     font.setFamily(fontFamily);
     font.setPixelSize(fontSize);
@@ -544,66 +566,51 @@ void SettingWid::updatePreview()
 
     // 预览文本
     QString previewText = QString("字体预览: %1\n").arg(fontFamily);
-    previewText += "中文: 8像素（单行/自适应）9-72（多行/9自动）\n";
-    previewText += "English Test: Hello World!";
+    previewText += "设置: =8像素，代表单行/自适应\n";
+    previewText += "9-72PX: 多行/=9: 自动";
 
-    // 按行分割
     QStringList lines = previewText.split('\n');
+    QFontMetricsF fm(font);
+    qreal lineHeight = fm.height();
+    qreal totalHeight = lines.size() * lineHeight;
+    qreal startY = textRect.top() + (textRect.height() - totalHeight) / 2;
 
-    QFontMetrics fm(font);
-    int lineHeight = fm.height();
-    int totalHeight = lines.size() * lineHeight;
-
-    // 绘制区域（内边距）
-    int padding = 8;
-    QRect textRect = pixmap.rect().adjusted(padding, padding, -padding, -padding);
-    painter.setClipRect(textRect);
-
-    // 垂直居中起始Y坐标
-    int startY = textRect.top() + (textRect.height() - totalHeight) / 2;
-
-    // 绘制一行的辅助函数
-    auto drawLine = [&](const QString &line, int x, int y, int isShadow) {
-        if (isShadow ==0){
-            painter.setPen(m_tempTextColor);
-            painter.drawText(x, y, line);
-        }
-        else{
-        if (isShadow>1) {
-            // 阴影效果：偏移 (2,2)，使用半透明的描边颜色
-            int offsetX = 2, offsetY = 2;
-            painter.setPen(QColor(0, 0, 0, 128));
-            painter.drawText(x + offsetX, y + offsetY, line);
-            // 主文字
-            painter.setPen(m_tempTextColor);
-            painter.drawText(x, y, line);
-        }
-        if (isShadow==1 || isShadow ==3){
-            // 描边效果：8方向偏移模拟轮廓
-            QColor strokeColor = m_tempStrokeColor;
-            painter.setPen(Qt::NoPen);
-            for (int dx = -1; dx <= 1; ++dx) {
-                for (int dy = -1; dy <= 1; ++dy) {
-                    if (dx == 0 && dy == 0) continue;
-                    painter.setPen(QPen(strokeColor, 2));
-                    painter.drawText(x + dx, y + dy, line);
-                }
-            }
-            // 主文字
-            painter.setPen(QPen(m_tempTextColor, 1));
-            painter.drawText(x, y, line);
-        }
-        }
-    };
-
-    // 逐行绘制，水平居中，不换行，超出裁剪
+    // 绘制每行文字（带描边/阴影效果）
     for (int i = 0; i < lines.size(); ++i) {
         QString line = lines[i];
         if (line.isEmpty()) continue;
-        int lineWidth = fm.horizontalAdvance(line);
-        int x = textRect.left() + (textRect.width() - lineWidth) / 2;
-        int y = startY + i * lineHeight + fm.ascent();
-        drawLine(line, x, y, m_tempMiaobianOrYinying);
+        qreal lineWidth = fm.horizontalAdvance(line);
+        qreal x = textRect.left() + (textRect.width() - lineWidth) / 2;
+        qreal y = startY + i * lineHeight + fm.ascent();
+
+        int effect = m_tempMiaobianOrYinying;
+        if (effect == 0) {
+            painter.setPen(m_tempTextColor);
+            painter.drawText(QPointF(x, y), line);
+        } else
+        {if (effect == 1 || effect == 3) {
+            // 描边：8方向偏移 1 物理像素
+            painter.setPen(Qt::NoPen);
+            qreal offset = 1;
+            for (int dx = -1; dx <= 1; ++dx) {
+                for (int dy = -1; dy <= 1; ++dy) {
+                    if (dx == 0 && dy == 0) continue;
+                    painter.setPen(QPen(m_tempStrokeColor, 2));
+                    painter.drawText(QPointF(x + dx * offset, y + dy * offset), line);
+                }
+            }
+            painter.setPen(QPen(m_tempTextColor, 1));
+            painter.drawText(QPointF(x, y), line);
+        }
+        if (effect > 1) {
+            // 阴影：偏移 3 物理像素
+            qreal shadowOffset = 3;
+            painter.setPen(QColor(0, 0, 0, 128));
+            painter.drawText(QPointF(x + shadowOffset, y + shadowOffset), line);
+            painter.setPen(m_tempTextColor);
+            painter.drawText(QPointF(x, y), line);
+        }
+        }
     }
     painter.end();
     ui.labelPreview->setPixmap(pixmap);

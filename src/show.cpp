@@ -371,7 +371,7 @@ void Show::updateSubtitleWindowPosition()
         int lineWidth = fm.horizontalAdvance(line);
         if (lineWidth > maxLineWidth) maxLineWidth = lineWidth;
     }
-    int subtitleWidth =autoSize ==1? maxWidth+100: qMin(maxWidth, maxLineWidth + 80);      // 左右边距各10px
+    int subtitleWidth =autoSize ==1? maxWidth: qMin(maxWidth, maxLineWidth + 80);      // 左右边距各10px
     int subtitleHeight = (autoSize ==1?1:lines.size()) * lineHeight + 40;        // 上下边距各10px
     subtitleHeight = qMin(subtitleHeight, windowHeight / 2);    // 限制最大高度
 

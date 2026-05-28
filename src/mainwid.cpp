@@ -1553,7 +1553,7 @@ void MainWid::OnShowSettingWid()
 
     // 计算对话框位置（例如在父窗口右侧显示）
     int x = parentRect.left()> screenRect.width()/2 ? parentRect.left()-dialogRect.width():parentRect.right();
-    int y = parentRect.top() + 5;  // 距离父窗口顶部50像素
+    int y = (screenRect.height()- dialogRect.height())/2;  // 距离父窗口顶部50像素
     if (y < screenRect.top()) y = screenRect.top();
     if (y + dialogRect.height() > screenRect.bottom()) {
         y = screenRect.bottom() - dialogRect.height();

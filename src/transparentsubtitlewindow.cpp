@@ -223,6 +223,7 @@ void TransparentSubtitleWindow::paintEvent(QPaintEvent *event)
         }
         if(GlobalVars::miaobianOrYinying()==2 || GlobalVars::miaobianOrYinying()==3) {//阴影效果
             painter.setPen(QColor(0, 0, 0, 170));
+            if(GlobalVars::getFullScreen())painter.drawText(x+3, y+3, line);
             painter.drawText(x+2, y+2, line);
             painter.drawText(x+1, y+1, line);
         }

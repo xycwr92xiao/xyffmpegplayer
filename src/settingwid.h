@@ -31,7 +31,7 @@ public:
         QColor getSubtitleHoverBgColor() const;
         QColor getSubtitleLeaveBgColor() const;
         bool getSubtitleKeepBackground() const;
-        int getMiaobianOrYinying() const;
+
     // 设置字幕设置
     void setSubtitleFont(const QString &family, int size);
     void setSubtitleColors(const QColor &textColor, const QColor &strokeColor,
@@ -61,7 +61,8 @@ private slots:
     void onApplyClicked();
     void onCancelClicked();
     void onOkClicked();
-
+protected:
+    void resizeEvent(QResizeEvent *event) override;
 private:
     void initUI();
     void populateFontFamilies();
