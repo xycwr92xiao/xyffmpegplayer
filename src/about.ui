@@ -16,11 +16,11 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string>PlayerDemo 关于</string>
+   <string>关于 XYPlayer</string>
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>://res/Player.ico</normaloff>://res/Player.ico</iconset>
+    <normaloff>:/res/xyplayer.ico</normaloff>:/res/xyplayer.ico</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <property name="leftMargin">
@@ -38,6 +38,19 @@
    <property name="spacing">
     <number>6</number>
    </property>
+   <item row="1" column="1" alignment="Qt::AlignRight">
+    <widget class="QPushButton" name="ClosePushButton">
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="text">
+      <string>确定</string>
+     </property>
+     <property name="autoDefault">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
    <item row="0" column="0" colspan="2">
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
@@ -56,14 +69,14 @@
             <widget class="QLabel" name="LogoLabel">
              <property name="minimumSize">
               <size>
-               <width>80</width>
-               <height>80</height>
+               <width>110</width>
+               <height>100</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>80</width>
-               <height>80</height>
+               <width>110</width>
+               <height>100</height>
               </size>
              </property>
              <property name="text">
@@ -76,6 +89,19 @@
            </item>
            <item>
             <layout class="QGridLayout" name="gridLayout_2">
+             <item row="1" column="0">
+              <widget class="QLabel" name="VersionLabel">
+               <property name="font">
+                <font>
+                 <family>微软雅黑</family>
+                </font>
+               </property>
+               <property name="text">
+                <string>版本：2.0
+时间：2026.05.31</string>
+               </property>
+              </widget>
+             </item>
              <item row="0" column="0">
               <widget class="QLabel" name="label_2">
                <property name="font">
@@ -87,20 +113,7 @@
                 </font>
                </property>
                <property name="text">
-                <string>XyMediaPlayer</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="VersionLabel">
-               <property name="font">
-                <font>
-                 <family>微软雅黑</family>
-                </font>
-               </property>
-               <property name="text">
-                <string>版本：1.0.1
-时间：2025.12.31</string>
+                <string>XyPlayer</string>
                </property>
               </widget>
              </item>
@@ -126,12 +139,50 @@ p, li { white-space: pre-wrap; }
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'SimSun';&quot;&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'SimSun'; font-size:10pt;&quot;&gt;powered by xycwr&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'SimSun'; font-size:10pt;&quot;&gt;contact to xycwr@qq.com&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;https://github.com/itisyang/playerdemo&quot;&gt;&lt;span style=&quot; font-family:'SimSun'; font-size:10pt; text-decoration: underline; color:#0000ff;&quot;&gt;https://github.com/xycwr/xymediaplayer&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;https://xycwr92xiao.github.io/XyffmpegPlayer/&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="openExternalLinks">
             <bool>true</bool>
            </property>
           </widget>
+         </item>
+         <item>
+          <layout class="QGridLayout" name="gridLayout_5">
+           <item row="1" column="0">
+            <widget class="QLabel" name="labelsponsorship">
+             <property name="minimumSize">
+              <size>
+               <width>110</width>
+               <height>100</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>110</width>
+               <height>100</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLabel" name="label_3">
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>50</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>扫码赞助作者，谢谢！
+
+Scan to sponsor the author, thank you!</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </item>
@@ -152,31 +203,24 @@ p, li { white-space: pre-wrap; }
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'SimSun'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;快捷键	指令&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;快捷键      	指令&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;----------------------------------&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Enter	屏幕-&amp;gt;全屏&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;↑	声音-&amp;gt;音量 +&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;↓	声音-&amp;gt;音量 -&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;→	播放-&amp;gt;定位-&amp;gt;步进5 秒&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;←	播放-&amp;gt;定位-&amp;gt;步退5 秒&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Enter	  	屏幕-&amp;gt;全屏&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;↑	  	声音-&amp;gt;音量 +&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;↓	  	声音-&amp;gt;音量 -&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;→	  	播放-&amp;gt;定位-&amp;gt;步进5 秒&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;←	  	播放-&amp;gt;定位-&amp;gt;步退5 秒&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;空格/&lt;/span&gt;&lt;span style=&quot; color:#800080;&quot;&gt;Pause&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;∕&lt;/span&gt;&lt;span style=&quot; color:#800080;&quot;&gt;p &lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt; 	暂停/播放&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;.&amp;gt;∕&amp;lt;.	  	逐祯向前/后播放&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;PageUp∕Down  	声音-&amp;gt;音量 -&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:10pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:10pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
        </item>
       </layout>
      </widget>
-    </widget>
-   </item>
-   <item row="1" column="1" alignment="Qt::AlignRight">
-    <widget class="QPushButton" name="ClosePushButton">
-     <property name="layoutDirection">
-      <enum>Qt::LeftToRight</enum>
-     </property>
-     <property name="text">
-      <string>确定</string>
-     </property>
-     <property name="autoDefault">
-      <bool>false</bool>
-     </property>
     </widget>
    </item>
   </layout>

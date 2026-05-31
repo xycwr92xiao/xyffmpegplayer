@@ -19,7 +19,7 @@ About::~About()
 bool About::Init()
 {
     this->setWindowModality(Qt::ApplicationModal);
-
+    this->setWindowTitle("关于 XyPlayer");   // 添加这一行
     this->setStyleSheet(
         "About { background-color: #2b2b2b; }"
         "QLabel, QTextBrowser, QTabWidget { color: #e0e0e0; }"
@@ -32,8 +32,9 @@ bool About::Init()
         "QPushButton:hover { background-color: #5a5a5a; }"
     );
 
-    this->setWindowIcon(QIcon("://res/player.png"));
-    ui->LogoLabel->setPixmap(QPixmap("://res/player.png").scaled(80, 80, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+   // this->setWindowIcon(QIcon(":/res/xyplayer.ico"));          // 或者使用 .ico
+    ui->LogoLabel->setPixmap(QPixmap(":/res/xyplayer.ico").scaled(60, 60, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    ui->labelsponsorship->setPixmap(QPixmap(":/res/xyplayer.png").scaled(100, 100, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     QString strVersion = QString("版本：%1\n时间：%2").arg(GlobalHelper::GetAppVersion()).arg(QString(__DATE__) + " " + QString(__TIME__));
     ui->VersionLabel->setText(strVersion);
     return true;

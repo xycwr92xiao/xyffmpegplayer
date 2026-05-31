@@ -13,7 +13,7 @@ const QString PLAYER_CONFIG_BASEDIR = QDir::tempPath();
 
 const QString PLAYER_CONFIG = "player_config.ini";
 
-const QString APP_VERSION = "0.1.0";
+const QString APP_VERSION = "2.0.0";
 
 GlobalHelper::GlobalHelper()
 {

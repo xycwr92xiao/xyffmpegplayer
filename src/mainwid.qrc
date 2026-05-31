@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file>res/fontawesome-webfont.ttf</file>
+	<file>res/xyplayer.png</file>
         <file>res/xyplayer.ico</file>
         <file>res/qss/about.css</file>
         <file>res/qss/ctrlbar.css</file>
